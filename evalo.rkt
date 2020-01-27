@@ -25,9 +25,6 @@
                  (== exp (jget obj key))
                  (absento-keys key obj)
                  (== value `undefined)))
-         ((fresh (key val) ;; Create field, empty object
-                 (== exp (jset `() key val))
-                 (== value `((,key . ,val)))))
          ((fresh (obj key val) ;; Create field, nonempty object
                  (== exp (jset obj key val))
                  (== value `((,key . ,val) . ,obj))

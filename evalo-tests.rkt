@@ -3,7 +3,7 @@
 
 (module+ test
   (require rackunit)
-  (test-equal? "Get #1"
+  (time (test-equal? "Get #1"
                (run* (res) (evalo (jget `((1 . 2) (3 . 4) (5 . 6)) 1) res))
                `(2))
   (test-equal? "Get #2"
@@ -30,6 +30,9 @@
   (test-equal? "Create"
                (run* (res) (evalo (jset `((1 . 2) (3 . 4) (5 . 6)) 0 100) res))
                `(((0 . 100) (1 . 2) (3 . 4) (5 . 6))))
+  (test-equal? "Create, empty object"
+               (run* (res) (evalo (jset `() 0 100) res))
+               `(((0 . 100))))
   (test-equal? "Delete #1"
                (run* (res) (evalo (jdel `((1 . 2) (3 . 4) (5 . 6)) 1) res))
                `(((3 . 4) (5 . 6))))
@@ -42,4 +45,4 @@
   (test-equal? "Delete, not found"
                (run* (res) (evalo (jdel `((1 . 2) (3 . 4) (5 . 6)) 0) res))
                `(((1 . 2) (3 . 4) (5 . 6))))
-  )
+  ))
