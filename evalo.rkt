@@ -9,8 +9,8 @@
 (define (evalo-env exp env value)
   (conde ((fresh (key exp2 env2) ;; Let
                  (== exp (jlet key value exp2))
-                 (== env2 (cons (cons key value) env))
-                 (evalo-env exp2 env value)))
+                 (== env2 `((,key . ,value) . ,env))
+                 (evalo-env exp2 env2 value)))
          ((fresh (body) ;; Func, no arguments
                  (== exp (jfunc `() body `()))
                  (evalo-env body env value)))
