@@ -21,7 +21,7 @@
          ((fresh (obj key) ;; Get field
                  (== exp (jget obj key))
                  (membero `(,key . ,value) obj)))
-         ((fresh (obj mem key v) ;; Get, not found
+         ((fresh (obj key) ;; Get, not found
                  (== exp (jget obj key))
                  (absento-keys key obj)
                  (== value `undefined)))
@@ -33,7 +33,7 @@
                  (== exp (jset obj key val))
                  (membero `(,key . ,v) obj)
                  (updato obj key val value)))
-         ((fresh (obj-prev key v) ;; Delete field, found
+         ((fresh (obj-prev key) ;; Delete field, found
                  (== exp (jdel obj-prev key))
                  (deleto obj-prev key value)))
          ((fresh (key) ;; Delete field, not found
