@@ -1,5 +1,6 @@
 #lang racket
 (require "faster-miniKanren/mk.rkt" "js-structures.rkt")
+(provide evalo)
 ;; For now, enviroments and objects are lists of pairs. Maybe use hashes?
 
 (define (evalo exp val)
@@ -23,7 +24,7 @@
          ((fresh (key) ;; Get, not found, empty object
                  (== exp (jget `() key))
                  (== value `undefined)))
-         ((fresh (obj obj-prev key k v) ;; Get, not found, nonempty object. Possibly use absento?
+         ((fresh (obj obj-prev key k v) ;; Get, not found, nonempty object
                  (== exp (jget obj key))
                  (== obj `((,k . ,v) . ,obj-prev))
                  (== value `undefined)
