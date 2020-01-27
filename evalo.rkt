@@ -21,31 +21,24 @@
          ((fresh (obj key) ;; Get field
                  (== exp (jget obj key))
                  (membero `(,key . ,value) obj)))
-         ((fresh (key) ;; Get, not found, empty object
-                 (== exp (jget `() key))
-                 (== value `undefined)))
-         ((fresh (obj mem key v) ;; Get, not found, nonempty object
+         ((fresh (obj mem key v) ;; Get, not found
                  (== exp (jget obj key))
-                 (== value `undefined)
-                 (=/= mem `(,key . ,v))
-                 (membero mem obj)))
+                 (absento-keys key obj)
+                 (== value `undefined)))
          ((fresh (key val) ;; Create field, empty object
                  (== exp (jset `() key val))
                  (== value `((,key . ,val)))))
          ((fresh (obj key val) ;; Create field, nonempty object
                  (== exp (jset obj key val))
                  (== value `((,key . ,val) . ,obj))
-                 (absento-keys key obj)
-          ))
+                 (absento-keys key obj)))
          ((fresh (obj key val v) ;; Update field
                  (== exp (jset obj key val))
                  (membero `(,key . ,v) obj)
-                 (updato obj key val value)
-                 ))
-         ((fresh (obj-prev key) ;; Delete field, found
+                 (updato obj key val value)))
+         ((fresh (obj-prev key v) ;; Delete field, found
                  (== exp (jdel obj-prev key))
-                 (deleto obj-prev key value)
-                 ))
+                 (deleto obj-prev key value)))
          ((fresh (key) ;; Delete field, not found
                  (== exp (jdel value key))
                  (absento-keys key value)))
@@ -78,32 +71,29 @@
                  ))))
 
 (define (deleto obj key result)
-  (conde ((fresh (v)
-                 (== obj `((,key . ,v)))
-                 (== result `())))
-         ((fresh (orest rrest k v)
-                 (== obj `((,k . ,v ) . ,orest))
-                 (conde ((== k key)
-                         (== orest result))
-                        ((=/= k key)
-                         (== result `((,k . ,v) . ,rrest))
-                         (deleto orest key rrest)))
-                 ))))
+  (fresh (orest rrest k v)
+         (== obj `((,k . ,v ) . ,orest))
+         (conde ((== k key)
+                 (== orest result))
+                ((=/= k key)
+                 (== result `((,k . ,v) . ,rrest))
+                 (deleto orest key rrest)))
+         ))
 
 (define (not-in-list el list)
   (conde
-    ((== list `()))
-    ((fresh (x rest)
-       (== `(,x . ,rest) list)
-       (=/= el x)
-       (not-in-list el rest)))))
+   ((== list `()))
+   ((fresh (x rest)
+           (== `(,x . ,rest) list)
+           (=/= el x)
+           (not-in-list el rest)))))
 
 (define (lookupo x env t)
-    (fresh (rest y v)
-      (== `((,y . ,v) . ,rest) env)
-      (conde
-        ((== y x) (== v t))
-        ((=/= y x) (lookupo x rest t)))))
+  (fresh (rest y v)
+         (== `((,y . ,v) . ,rest) env)
+         (conde
+          ((== y x) (== v t))
+          ((=/= y x) (lookupo x rest t)))))
 
 (define (membero item lst)
   (fresh (first rest)
