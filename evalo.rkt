@@ -1,6 +1,6 @@
 #lang racket
 (require "faster-miniKanren/mk.rkt" "js-structures.rkt")
-(provide evalo)
+(provide evalo evalo-env)
 ;; For now, enviroments and objects are lists of pairs. Maybe use hashes?
 
 (define (evalo exp val)
@@ -11,6 +11,9 @@
                  (== exp (jlet key value exp2))
                  (== env2 `((,key . ,value) . ,env))
                  (evalo-env exp2 env2 value)))
+         ((fresh (var)
+                 (== exp (jref var))
+                 (lookupo var env value)))
          ((fresh (body) ;; Func, no arguments
                  (== exp (jfunc `() body `()))
                  (evalo-env body env value)))

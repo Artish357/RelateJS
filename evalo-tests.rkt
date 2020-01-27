@@ -45,4 +45,25 @@
   (test-equal? "Delete, not found"
                (run* (res) (evalo (jdel `((1 . 2) (3 . 4) (5 . 6)) 0) res))
                `(((1 . 2) (3 . 4) (5 . 6))))
+  (test-equal? "Variable reference #1"
+               (run* (res) (evalo-env (jref `x) `((x . 1) (y . 2) (z . 3)) res))
+               `(1))
+  (test-equal? "Variable reference #2"
+               (run* (res) (evalo-env (jref `y) `((x . 1) (y . 2) (z . 3)) res))
+               `(2))
+  (test-equal? "Variable reference #3"
+               (run* (res) (evalo-env (jref `z) `((x . 1) (y . 2) (z . 3)) res))
+               `(3))
+  (test-equal? "Function application, no parameters"
+               (run* (res) (evalo (jfunc `() (jget `((4 . 2)) 4) `()) res))
+               `(2))
+  (test-equal? "Function application, parameter #1"
+               (run* (res) (evalo (jfunc `(x y z) (jref `x) `(1 2 3)) res))
+               `(1))
+  (test-equal? "Function application, parameter #2"
+               (run* (res) (evalo (jfunc `(x y z) (jref `y) `(1 2 3)) res))
+               `(2))
+  (test-equal? "Function application, parameter #3"
+               (run* (res) (evalo (jfunc `(x y z) (jref `z) `(1 2 3)) res))
+               `(3))
   ))

@@ -1,5 +1,5 @@
 #lang racket
-(provide jlet jfunc jget jset jdel)
+(provide jlet jfunc jget jset jdel jref)
 
 (define (jlet key value exp)
   `(let ,key ,value ,exp))
@@ -15,3 +15,6 @@
 
 (define (jdel obj key)
   `(delete ,obj ,key))
+
+(define (jref var)
+  `(ref ,var))
