@@ -1,11 +1,17 @@
 #lang racket
-(provide jlet jfunc jget jset jdel jref)
+(provide jlet jfun jclo japp jget jset jdel jvar)
 
 (define (jlet key value exp)
   `(let ,key ,value ,exp))
 
-(define (jfunc params body args)
-  `(func ,params ,body ,args))
+(define (jfun params body)
+  `(fun ,params ,body))
+
+(define (jclo params body env)
+  `(jclosure ,params ,body ,env))
+
+(define (japp closure args)
+  `(app ,closure ,args))
 
 (define (jget obj key)
   `(get ,obj ,key))
@@ -16,5 +22,5 @@
 (define (jdel obj key)
   `(delete ,obj ,key))
 
-(define (jref var)
+(define (jvar var)
   `(ref ,var))
