@@ -56,7 +56,7 @@
                  (evalo-env ref env ref^ store store^ next-address next-address^)
                  (appendo store^ ref^ store~)
                  (incremento next-address^ next-address~)
-                 (== value next-address)))
+                 (== value (jref next-address))))
          ((fresh (addr-exp addr) ;; Fetch from memory
                  (== exp (jderef addr-exp))
                  (evalo-env addr-exp env (jref addr) store store~ next-address next-address~)

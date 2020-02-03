@@ -74,11 +74,14 @@
                `(3))
   (test= "Allocation"
                (run* (val store next-address) (evalo-env (jall 100) `() val `() store `() next-address))
-               `(( () (100)  (()) )))
+               `(( ,(jref `()) (100)  (()) )))
   (test= "Dereference"
                (run* (val store next-address) (evalo-env (jderef (jref `())) `() val `(123) store `(()) next-address))
                `((123 (123)  (()) )))
   (test= "Assignment"
                (run* (val store next-address) (evalo-env (jass (jref `()) 5) `() val `(0) store `(()) next-address))
                `((5 (5)  (()) )))
+  (test= "Combined memory functions"
+               (run* (val store next-address) (evalo-env (jass (jall 66) (jderef (jref `()))) `() val `(33) store `(()) next-address))
+               `((33 (33 33)  ((())) )))
   )
