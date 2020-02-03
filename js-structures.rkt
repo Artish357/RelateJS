@@ -1,5 +1,5 @@
 #lang racket
-(provide jlet jfun jclo japp jget jset jdel jvar jobj jref jderef jass)
+(provide jlet jfun jclo japp jget jset jdel jvar jobj jref jderef jass jall)
 
 (define (jlet key value exp)
   `(let ,key ,value ,exp))
@@ -23,16 +23,19 @@
   `(delete ,obj ,key))
 
 (define (jvar var)
-  `(ref ,var))
+  `(var ,var))
 
 (define (jobj bindings)
   `(object ,bindings))
+
+(define (jall value)
+  `(allocate ,value))
 
 (define (jref value)
   `(ref ,value))
 
 (define (jderef address)
-  `(ref ,address))
+  `(deref ,address))
 
 (define (jass var val)
   `(assign ,var ,val))

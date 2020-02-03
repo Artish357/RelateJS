@@ -6,7 +6,7 @@
   (fresh (store^ next-address^) (evalo-env exp `() val `() store^ `() next-address^)))
 
 (define (evalo-env exp env value store store^ next-address next-address^)
-  (conde ((conde ((numbero exp)) ((objecto exp))) ;; Values
+  (conde ((conde ((numbero exp)) ((objecto exp)) ((closuro exp)) ((referenso exp))) ;; Values
           (== exp value)
           (== `(,store . ,next-address) `(,store^ . ,next-address^)))
          ((fresh (key exp2 env2) ;; Let
@@ -52,21 +52,19 @@
                  (deleto bindings-prev key^ bindings)
                  (== value (jobj bindings))
                  ))
-         ((fresh (ref ref^ next-address^^) ;; Allocate memory
-                 (== exp (jref ref))
-                 (evalo-env ref env ref^ store store^ next-address next-address^^)
-                 (appendo store ref^ store^)
+         ((fresh (ref ref^ next-address^^ store^^) ;; Allocate memory
+                 (== exp (jall ref))
+                 (evalo-env ref env ref^ store store^^ next-address next-address^^)
+                 (appendo store^^ ref^ store^)
                  (incremento next-address^^ next-address^)
-                 (== value ref))) ;; Not sure what it is supposed to evaluate to
+                 (== value next-address))) ;; Not sure what it is supposed to evaluate to
          ((fresh (address) ;; Fetch from memory
                  (== exp (jderef address))
                  (indexo store address value)))
-         ((fresh (var val val^ next-address^^ store^^) ;; Assign to memory
+         ((fresh (var val addr val^ store^^) ;; Assign to memory
                  (== exp (jass var val))
-                 (evalo-env val env val^ store store^^ next-address next-address^^)
-                 (appendo store^^ val^ store^)
-                 (incremento next-address^^ next-address^)
-                 ;; (appendo env `(,var . ,val) ??) ;; Where to store modified environment?
+                 (evalo-env-list `(,var ,val) env `(,(jref addr) ,val^) store store^^ next-address next-address^)
+                 (set-indexo store^^ addr val^ store^)
                  (== value val^)
                  )) ;; Not sure what it is supposed to evaluate to
          ))
@@ -170,6 +168,16 @@
                  (decremento index index^)
                  (indexo lrest index^ result)))))
 
+(define (set-indexo lst index value result)
+  (fresh (l lrest rrest index^)
+         (== lst `(,l . ,lrest))
+         (conde ((== index `())
+                 (== result `(,value . ,lrest)))
+                ((=/= index `())
+                 (decremento index index^)
+                 (== result `(,l . ,rrest))
+                 (set-indexo lrest index^ value rrest)))))
+
 (define (membero item lst)
   (fresh (first rest)
          (== `(,first . ,rest) lst)
@@ -178,5 +186,8 @@
 (define (objecto exp)
   (fresh (binds) (== exp (jobj binds))))
 
-;(define (closuro exp)
-;  (fresh (binds) (== exp (jobj binds))))
+(define (closuro exp)
+  (fresh (params body env) (== exp (jclo params body env))))
+
+(define (referenso exp)
+  (fresh (addr) (== exp (jref addr))))

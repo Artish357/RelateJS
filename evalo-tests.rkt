@@ -66,8 +66,10 @@
   (test-equal? "Function application, parameter #3"
                (run* (res) (evalo (japp (jfun `(x y z) (jvar `z)) `(1 2 3)) res))
                `(3))
+  (test-equal? "Allocation"
+               (run* (val store next-address) (evalo-env (jall 100) `() val `() store `() next-address))
+               `(( () (100)  (()) )))
   (test-equal? "Assignment"
-               (run* (val store next-address) (evalo-env (jass `x 5) `() val `() store `() next-address)
-                     )
+               (run* (val store next-address) (evalo-env (jass (jref `()) 5) `() val `(0) store `(()) next-address))
                `((5 (5)  (()) )))
 )
