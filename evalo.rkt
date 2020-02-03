@@ -50,18 +50,17 @@
                  (evalo-env obj-exp env (jobj bindings-prev) store store^^ next-address next-address^^)
                  (evalo-env key env key^ store^^ store^ next-address^^ next-address^)
                  (deleto bindings-prev key^ bindings)
-                 (== value (jobj bindings))
-                 ))
+                 (== value (jobj bindings))))
          ((fresh (ref ref^ next-address^^ store^^) ;; Allocate memory
                  (== exp (jall ref))
                  (evalo-env ref env ref^ store store^^ next-address next-address^^)
                  (appendo store^^ ref^ store^)
                  (incremento next-address^^ next-address^)
                  (== value next-address))) ;; Not sure what it is supposed to evaluate to
-         ((fresh (address) ;; Fetch from memory
-                 (== exp (jderef address))
-                 (indexo store address value)
-                 (== `(,store . ,next-address) `(,store^ . ,next-address^))))
+         ((fresh (addr-exp addr) ;; Fetch from memory
+                 (== exp (jderef addr-exp))
+                 (evalo-env addr-exp env (jref addr) store store^ next-address next-address^)
+                 (indexo store addr value)))
          ((fresh (var val addr val^ store^^) ;; Assign to memory
                  (== exp (jass var val))
                  (evalo-env-list `(,var ,val) env `(,(jref addr) ,val^) store store^^ next-address next-address^)
