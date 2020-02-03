@@ -45,15 +45,15 @@
   (test-equal? "Delete, not found"
                (run* (res) (evalo (jdel (jobj `((1 . 2) (3 . 4) (5 . 6))) 0) res))
                `(,(jobj `((1 . 2) (3 . 4) (5 . 6)))))
-;  (test-equal? "Variable reference #1"
-;               (run* (res) (evalo-env (jref `x) `((x . 1) (y . 2) (z . 3)) res))
-;               `(1))
-;  (test-equal? "Variable reference #2"
-;               (run* (res) (evalo-env (jref `y) `((x . 1) (y . 2) (z . 3)) res))
-;               `(2))
-;  (test-equal? "Variable reference #3"
-;               (run* (res) (evalo-env (jref `z) `((x . 1) (y . 2) (z . 3)) res))
-;               `(3))
+  ;  (test-equal? "Variable reference #1"
+  ;               (run* (res) (evalo-env (jref `x) `((x . 1) (y . 2) (z . 3)) res))
+  ;               `(1))
+  ;  (test-equal? "Variable reference #2"
+  ;               (run* (res) (evalo-env (jref `y) `((x . 1) (y . 2) (z . 3)) res))
+  ;               `(2))
+  ;  (test-equal? "Variable reference #3"
+  ;               (run* (res) (evalo-env (jref `z) `((x . 1) (y . 2) (z . 3)) res))
+  ;               `(3))
   (test-equal? "Function application, no parameters"
                (run* (res) (evalo (japp (jfun `() (jget (jobj `()) `0)) `()) res))
                `(undefined))
@@ -66,4 +66,8 @@
   (test-equal? "Function application, parameter #3"
                (run* (res) (evalo (japp (jfun `(x y z) (jvar `z)) `(1 2 3)) res))
                `(3))
-  )
+  (test-equal? "Assignment"
+               (run* (val store next-address) (evalo-env (jass `x 5) `() val `() store `() next-address)
+                     )
+               `((5 (5)  (()) )))
+)

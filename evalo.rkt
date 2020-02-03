@@ -3,21 +3,21 @@
 (provide evalo evalo-env)
 
 (define (evalo exp val)
-  (fresh (store^ next-address^) (evalo-env exp `() val `() store^ 0 next-address^)))
+  (fresh (store^ next-address^) (evalo-env exp `() val `() store^ `() next-address^)))
 
 (define (evalo-env exp env value store store^ next-address next-address^)
-  (conde ((conde ((numbero exp)) ((objecto exp)))
+  (conde ((conde ((numbero exp)) ((objecto exp))) ;; Values
           (== exp value)
           (== `(,store . ,next-address) `(,store^ . ,next-address^)))
          ((fresh (key exp2 env2) ;; Let
                  (== exp (jlet key value exp2))
                  (== env2 `((,key . ,value) . ,env))
                  (evalo-env exp2 env2 value store store^ next-address next-address^)))
-         ((fresh (var)
+         ((fresh (var) ;; Look up a variable
                  (== exp (jvar var))
                  (lookupo var env value)
                  (== `(,store . ,next-address) `(,store^ . ,next-address^))))
-         ((fresh (body params) ;; Closure
+         ((fresh (body params) ;; Function creation
                  (== exp (jfun params body))
                  (== value (jclo params body env))
                  (== `(,store . ,next-address) `(,store^ . ,next-address^))))
@@ -52,6 +52,23 @@
                  (deleto bindings-prev key^ bindings)
                  (== value (jobj bindings))
                  ))
+         ((fresh (ref ref^ next-address^^) ;; Allocate memory
+                 (== exp (jref ref))
+                 (evalo-env ref env ref^ store store^ next-address next-address^^)
+                 (appendo store ref^ store^)
+                 (incremento next-address^^ next-address^)
+                 (== value ref))) ;; Not sure what it is supposed to evaluate to
+         ((fresh (address) ;; Fetch from memory
+                 (== exp (jderef address))
+                 (indexo store address value)))
+         ((fresh (var val val^ next-address^^ store^^) ;; Assign to memory
+                 (== exp (jass var val))
+                 (evalo-env val env val^ store store^^ next-address next-address^^)
+                 (appendo store^^ val^ store^)
+                 (incremento next-address^^ next-address^)
+                 ;; (appendo env `(,var . ,val) ??) ;; Where to store modified environment?
+                 (== value val^)
+                 )) ;; Not sure what it is supposed to evaluate to
          ))
 
 (define (evalo-env-list exp-list env value-list store store^ next-address next-address^)
@@ -66,7 +83,7 @@
   (== out `(,in)))
 
 (define (decremento in out)
-  (== `(,out) in))
+  (incremento out in))
 
 (define (keyso o k)
   (conde ((== o `()) (== k `()))
@@ -136,6 +153,22 @@
          (conde
           ((== y x) (== v t))
           ((=/= y x) (lookupo x rest t)))))
+
+(define (appendo list item result)
+  (conde ((== list `()) (== result `(,item)))
+         ((fresh (l lrest rrest)
+                 (== list `(,l . ,lrest))
+                 (== result `(,l . ,rrest))
+                 (appendo lrest item rrest)))))
+
+(define (indexo lst index result)
+  (fresh (l lrest index^)
+         (== lst `(,l . ,lrest))
+         (conde ((== index `())
+                 (== result l))
+                ((=/= index `())
+                 (decremento index index^)
+                 (indexo lrest index^ result)))))
 
 (define (membero item lst)
   (fresh (first rest)
