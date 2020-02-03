@@ -69,6 +69,9 @@
   (test-equal? "Allocation"
                (run* (val store next-address) (evalo-env (jall 100) `() val `() store `() next-address))
                `(( () (100)  (()) )))
+  (test-equal? "Dereference"
+               (run* (val store next-address) (evalo-env (jderef `()) `() val `(123) store `(()) next-address))
+               `((123 (123)  (()) )))
   (test-equal? "Assignment"
                (run* (val store next-address) (evalo-env (jass (jref `()) 5) `() val `(0) store `(()) next-address))
                `((5 (5)  (()) )))

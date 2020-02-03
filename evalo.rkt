@@ -60,13 +60,13 @@
                  (== value next-address))) ;; Not sure what it is supposed to evaluate to
          ((fresh (address) ;; Fetch from memory
                  (== exp (jderef address))
-                 (indexo store address value)))
+                 (indexo store address value)
+                 (== `(,store . ,next-address) `(,store^ . ,next-address^))))
          ((fresh (var val addr val^ store^^) ;; Assign to memory
                  (== exp (jass var val))
                  (evalo-env-list `(,var ,val) env `(,(jref addr) ,val^) store store^^ next-address next-address^)
                  (set-indexo store^^ addr val^ store^)
-                 (== value val^)
-                 )) ;; Not sure what it is supposed to evaluate to
+                 (== value val^))) ;; Not sure what it is supposed to evaluate to
          ))
 
 (define (evalo-env-list exp-list env value-list store store^ next-address next-address^)
