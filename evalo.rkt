@@ -28,20 +28,20 @@
                  (zipo zipped params args-eval)
                  (extendo cenv zipped cenv^)
                  (evalo-env body cenv^ value store^^^ store^ next-address^^^ next-address^)))
-         ((fresh (bindings key key^) ;; Get
-                 (== exp (jget (jobj bindings) key))
-                 (evalo-env key env key^ store store^ next-address next-address^)
+         ((fresh (obj-exp bindings key key^) ;; Get
+                 (== exp (jget obj-exp key))
+                 (evalo-env-list `(,key ,obj-exp) env `(,key^ ,(jobj bindings)) store store^ next-address next-address^)
                  (conde ((absento-keys key^ bindings) ;; not found
                          (== value `undefined))
                         ((membero `(,key^ . ,value) bindings))))) ;; found
-         ((fresh (bindings key key^ val val^) ;; Create field
-                 (== exp (jset (jobj bindings) key val))
-                 (evalo-env-list `(,key ,val) env `(,key^ ,val^) store store^ next-address next-address^)
+         ((fresh (obj-exp bindings key key^ val val^) ;; Create field
+                 (== exp (jset obj-exp key val))
+                 (evalo-env-list `(,obj-exp ,key ,val) env `(,(jobj bindings) ,key^ ,val^) store store^ next-address next-address^)
                  (== value (jobj `((,key^ . ,val^) . ,bindings)))
                  (absento-keys key^ bindings)))
-         ((fresh (bindings bindings-updated key key^ val val^ v) ;; Update field
-                 (== exp (jset (jobj bindings) key val))
-                 (evalo-env-list `(,key ,val) env `(,key^ ,val^) store store^ next-address next-address^)
+         ((fresh (obj-exp bindings bindings-updated key key^ val val^ v) ;; Update field
+                 (== exp (jset obj-exp key val))
+                 (evalo-env-list `(,obj-exp ,key ,val) env `(,(jobj bindings) ,key^ ,val^) store store^ next-address next-address^)
                  (membero `(,key^ . ,v) bindings)
                  (updato bindings key^ val^ bindings-updated)
                  (== value (jobj bindings-updated))))
