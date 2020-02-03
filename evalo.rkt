@@ -1,19 +1,14 @@
 #lang racket
 (require "faster-miniKanren/mk.rkt" "js-structures.rkt")
 (provide evalo evalo-env)
-;; For now, enviroments and objects are lists of pairs. Maybe use hashes?
 
 (define (evalo exp val)
   (fresh (store^ next-address^) (evalo-env exp `() val `() store^ 0 next-address^)))
 
 (define (evalo-env exp env value store store^ next-address next-address^)
-  (conde ((numbero exp)
+  (conde ((conde ((numbero exp)) ((objecto exp)))
           (== exp value)
-          (== `(,store . ,next-address) `(,store^ . ,next-address^))) ;; temporary!
-         ((fresh (params body cenv)
-                 (== exp (jclo params body cenv))
-                 (== value exp)
-                 (== `(,store . ,next-address) `(,store^ . ,next-address^))))
+          (== `(,store . ,next-address) `(,store^ . ,next-address^)))
          ((fresh (key exp2 env2) ;; Let
                  (== exp (jlet key value exp2))
                  (== env2 `((,key . ,value) . ,env))
@@ -32,30 +27,31 @@
                  (evalo-env-list args env args-eval store^^ store^^^ next-address^^ next-address^^^)
                  (zipo zipped params args-eval)
                  (extendo cenv zipped cenv^)
-                 (evalo-env body cenv^ value store^^^ store^ next-address^^^ next-address^)
-                 ))
-         ((fresh (obj key key^) ;; Get
-                 (== exp (jget obj key))
+                 (evalo-env body cenv^ value store^^^ store^ next-address^^^ next-address^)))
+         ((fresh (bindings key key^) ;; Get
+                 (== exp (jget (jobj bindings) key))
                  (evalo-env key env key^ store store^ next-address next-address^)
-                 (conde ((absento-keys key^ obj) ;; not found
+                 (conde ((absento-keys key^ bindings) ;; not found
                          (== value `undefined))
-                        ((membero `(,key^ . ,value) obj))))) ;; found
-         ((fresh (obj key key^ val val^ store^^ next-address^^) ;; Create field
-                 (== exp (jset obj key val))
-                 (evalo-env key env key^ store store^^ next-address next-address^^)
-                 (evalo-env val env val^ store^^ store^ next-address^^ next-address^)
-                 (== value `((,key^ . ,val^) . ,obj))
-                 (absento-keys key^ obj)))
-         ((fresh (obj key key^ val val^ v store^^ next-address^^) ;; Update field
-                 (== exp (jset obj key val))
-                 (evalo-env key env key^ store store^^ next-address next-address^^)
-                 (evalo-env val env val^  store^^ store^ next-address^^ next-address^)
-                 (membero `(,key^ . ,v) obj)
-                 (updato obj key^ val^ value)))
-         ((fresh (obj-prev key key^) ;; Delete field
-                 (== exp (jdel obj-prev key))
-                 (evalo-env key env key^ store store^ next-address next-address^)
-                 (deleto obj-prev key^ value)))
+                        ((membero `(,key^ . ,value) bindings))))) ;; found
+         ((fresh (bindings key key^ val val^) ;; Create field
+                 (== exp (jset (jobj bindings) key val))
+                 (evalo-env-list `(,key ,val) env `(,key^ ,val^) store store^ next-address next-address^)
+                 (== value (jobj `((,key^ . ,val^) . ,bindings)))
+                 (absento-keys key^ bindings)))
+         ((fresh (bindings bindings-updated key key^ val val^ v) ;; Update field
+                 (== exp (jset (jobj bindings) key val))
+                 (evalo-env-list `(,key ,val) env `(,key^ ,val^) store store^ next-address next-address^)
+                 (membero `(,key^ . ,v) bindings)
+                 (updato bindings key^ val^ bindings-updated)
+                 (== value (jobj bindings-updated))))
+         ((fresh (obj-exp bindings-prev bindings key key^ store^^ next-address^^) ;; Delete field
+                 (== exp (jdel obj-exp key))
+                 (evalo-env obj-exp env (jobj bindings-prev) store store^^ next-address next-address^^)
+                 (evalo-env key env key^ store^^ store^ next-address^^ next-address^)
+                 (deleto bindings-prev key^ bindings)
+                 (== value (jobj bindings))
+                 ))
          ))
 
 (define (evalo-env-list exp-list env value-list store store^ next-address next-address^)
@@ -101,7 +97,7 @@
 (define (deleto obj key result)
   (conde ((== obj `()) (== result `()))
          ((fresh (orest rrest k v)
-                 (== obj `((,k . ,v ) . ,orest))
+                 (== obj `((,k . ,v) . ,orest))
                  (conde ((== k key)
                          (== orest result))
                         ((=/= k key)
@@ -119,10 +115,10 @@
 (define (zipo l keys values)
   (conde ((== keys `()) (== values `()) (== l `()))
          ((fresh (k v l^ krest vrest)
-                (== keys `(,k . ,krest))
-                (== values `(,v . ,vrest))
-                (== l `((,k . ,v) . ,l^))
-                (zipo l^ krest vrest))))
+                 (== keys `(,k . ,krest))
+                 (== values `(,v . ,vrest))
+                 (== l `((,k . ,v) . ,l^))
+                 (zipo l^ krest vrest))))
   )
 
 
@@ -145,3 +141,9 @@
   (fresh (first rest)
          (== `(,first . ,rest) lst)
          (conde ((== first item)) ((membero item rest)))))
+
+(define (objecto exp)
+  (fresh (binds) (== exp (jobj binds))))
+
+;(define (closuro exp)
+;  (fresh (binds) (== exp (jobj binds))))
