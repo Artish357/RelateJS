@@ -56,7 +56,7 @@
                  (evalo-env ref env ref^ store store^^ next-address next-address^^)
                  (appendo store^^ ref^ store^)
                  (incremento next-address^^ next-address^)
-                 (== value next-address))) ;; Not sure what it is supposed to evaluate to
+                 (== value next-address)))
          ((fresh (addr-exp addr) ;; Fetch from memory
                  (== exp (jderef addr-exp))
                  (evalo-env addr-exp env (jref addr) store store^ next-address next-address^)
@@ -65,7 +65,7 @@
                  (== exp (jass var val))
                  (evalo-env-list `(,var ,val) env `(,(jref addr) ,val^) store store^^ next-address next-address^)
                  (set-indexo store^^ addr val^ store^)
-                 (== value val^))) ;; Not sure what it is supposed to evaluate to
+                 (== value val^)))
          ))
 
 (define (evalo-env-list exp-list env value-list store store^ next-address next-address^)
