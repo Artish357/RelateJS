@@ -6,7 +6,7 @@
   (fresh (store^ next-address^) (evalo-env exp `() val `() store^ `() next-address^)))
 
 (define (evalo-env exp env value store store~ next-address next-address~)
-  (conde ((conde ((numbero exp)) ((objecto exp)) ((closuro exp)) ((referenso exp))) ;; Values
+  (conde ((conde ((numbero exp)) ((objecto exp)) ((closuro exp)) ((referenso exp)) ((== exp (jundef))) ((boolo exp))) ;; Values
           (== exp value)
           (== `(,store . ,next-address) `(,store~ . ,next-address~)))
          ((fresh (key exp2 env2) ;; Let
@@ -32,7 +32,7 @@
                  (== exp (jget obj-exp key))
                  (evalo-env-list `(,key ,obj-exp) env `(,key^ ,(jobj bindings)) store store~ next-address next-address~)
                  (conde ((absento-keys key^ bindings) ;; not found
-                         (== value `undefined))
+                         (== value (jundef)))
                         ((membero `(,key^ . ,value) bindings))))) ;; found
          ((fresh (obj-exp bindings key key^ val val^) ;; Create field
                  (== exp (jset obj-exp key val))
@@ -66,6 +66,18 @@
                  (evalo-env-list `(,var ,val) env `(,(jref addr) ,val^) store store^ next-address next-address~)
                  (set-indexo store^ addr val^ store~)
                  (== value val^)))
+         ((fresh (first second dummy) ;; Begin-discard
+                 (== exp (jbeg first second))
+                 (evalo-env-list `(,first ,second) env `(,dummy ,value) store store~ next-address next-address~)))
+         ((fresh (cond cond^ then else store^ next-address^) ;; If statements
+                 (== exp (jif cond then else))
+                 (evalo-env cond env cond^ store store^ next-address next-address^)
+                 (conde ((== cond^ (jbool #t)) (evalo-env then env value store^ store~ next-address^ next-address~))
+                        ((== cond^ (jbool #f)) (evalo-env else env value store^ store~ next-address^ next-address~)))))
+         ((fresh (cond body)
+                 (== exp (jwhile cond body))
+                 (evalo-env (jif cond (jbeg body (jwhile cond body)) (jundef))
+                            env value store store~ next-address next-address~)))
          ))
 
 (define (evalo-env-list exp-list env value-list store store~ next-address next-address~)
@@ -190,3 +202,6 @@
 
 (define (referenso exp)
   (fresh (addr) (== exp (jref addr))))
+
+(define (boolo exp)
+  (fresh (b) (== exp (jbool b))))

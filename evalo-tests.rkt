@@ -20,10 +20,10 @@
                `(6))
   (test= "Get, empty"
                (run* (res) (evalo (jget (jobj `()) 1) res))
-               `(undefined))
+               `(,(jundef)))
   (test= "Get, not found"
                (run* (res) (evalo (jget (jobj `((1 . 2) (3 . 4) (5 . 6))) 4) res))
-               `(undefined))
+               `(,(jundef)))
   (test= "Update #1"
                (run* (res) (evalo (jset (jobj `((1 . 2) (3 . 4) (5 . 6))) 1 100) res))
                `(,(jobj `((1 . 100) (3 . 4) (5 . 6)))))
@@ -62,7 +62,7 @@
                `(3))
   (test= "Function application, no parameters"
                (run* (res) (evalo (japp (jfun `() (jget (jobj `()) `0)) `()) res))
-               `(undefined))
+               `(,(jundef)))
   (test= "Function application, parameter #1"
                (run* (res) (evalo (japp (jfun `(x y z) (jvar `x)) `(1 2 3)) res))
                `(1))
@@ -84,4 +84,14 @@
   (test= "Combined memory functions"
                (run* (val store next-address) (evalo-env (jass (jall 66) (jderef (jref `()))) `() val `(33) store `(()) next-address))
                `((33 (33 33)  ((())) )))
+  (let ((testfunc (jfun `(x)
+                        (jbeg
+                         (jall (jvar `x))
+                         (jif (jderef (jref `())) 0 1)))))
+    (test= "Control structures #1"
+           (run* (val) (evalo (japp testfunc `(,(jbool #t))) val))
+           `(1)
+    (test= "Control structures #2"
+           (run* (val) (evalo (japp testfunc `(,(jbool #f))) val))
+           `(0)
   )

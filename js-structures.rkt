@@ -1,5 +1,7 @@
 #lang racket
-(provide jlet jfun jclo japp jget jset jdel jvar jobj jref jderef jass jall)
+(provide jlet jfun jclo japp jget jset jdel jvar
+         jobj jref jderef jass jall jbeg jbool
+         jif jundef jnul jwhile)
 
 (define (jlet key value exp)
   `(let ,key ,value ,exp))
@@ -39,3 +41,21 @@
 
 (define (jass var val)
   `(assign ,var ,val))
+
+(define (jbeg first second)
+  `(begin ,first ,second))
+
+(define (jbool bool)
+  `(boolean ,bool))
+
+(define (jif cond then else)
+  `(if ,cond ,then ,else))
+
+(define (jundef)
+  `undefined)
+
+(define (jnul)
+  `null)
+
+(define (jwhile cond body)
+  `(while ,cond ,body))
