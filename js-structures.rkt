@@ -63,5 +63,5 @@
 (define (jbrk label value)
   `(jbreak ,label ,value))
 
-(define (value-list . values)
+(define (value-list values)
   (cons `value-list values))

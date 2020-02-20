@@ -87,11 +87,12 @@
   (let ((testfunc (jfun `(x)
                         (jbeg
                          (jall (jvar `x))
-                         (jif (jderef (jref `())) 0 1)))))
+                         (jif (jderef (jref `())) 1 0)))))
     (test= "Control structures #1"
            (run* (val) (evalo (japp testfunc `(,(jbool #t))) val))
-           `(1)
+           `(1))
     (test= "Control structures #2"
            (run* (val) (evalo (japp testfunc `(,(jbool #f))) val))
-           `(0)
+           `(0))
+    )
   )

@@ -21,81 +21,109 @@
                  (== exp (jfun params body))
                  (== value (jclo params body env))
                  (== `(,store . ,next-address) `(,store~ . ,next-address~))))
-         ((fresh (closure params args args-eval body cenv cenv^ zipped store^ store^^ next-address^ next-address^^) ;; Function application
+         ((fresh (closure params args args-eval body cenv cenv^ zipped store^ store^^ next-address^ next-address^^ args-eval-list) ;; Function application
                  (== exp (japp closure args))
-                 (evalo-env closure env (jclo params body cenv) store store^ next-address next-address^)
-                 (evalo-env-list args env args-eval store^ store^^ next-address^ next-address^^)
-                 (zipo zipped params args-eval)
-                 (extendo cenv zipped cenv^)
-                 (evalo-env body cenv^ value store^^ store~ next-address^^ next-address~)))
+                 (evalo/propagation evalo-env closure env (jclo params body cenv)
+                                    store store^ store~
+                                    next-address next-address^ next-address~
+                                    (evalo/propagation evalo-env-list args env args-eval-list
+                                                       store^ store^^ store~
+                                                       next-address^ next-address^^ next-address~
+                                                       (== args-eval-list (value-list args-eval))
+                                                       (zipo zipped params args-eval)
+                                                       (extendo cenv zipped cenv^)
+                                                       (evalo-env body cenv^ value store^^ store~ next-address^^ next-address~)))))
          ((fresh (obj-exp bindings key key^) ;; Get
                  (== exp (jget obj-exp key))
-                 (evalo-env-list `(,key ,obj-exp) env `(,key^ ,(jobj bindings)) store store~ next-address next-address~)
-                 (conde ((absento-keys key^ bindings) ;; not found
-                         (== value (jundef)))
-                        ((membero `(,key^ . ,value) bindings))))) ;; found
+                 (evalo/propagation evalo-env-list `(,key ,obj-exp) env (value-list `(,key^ ,(jobj bindings)))
+                                    store store~ store~
+                                    next-address next-address~ next-address~
+                                    (conde ((absento-keys key^ bindings) ;; not found
+                                            (== value (jundef)))
+                                           ((membero `(,key^ . ,value) bindings)))))) ;; found
          ((fresh (obj-exp bindings key key^ val val^) ;; Create field
                  (== exp (jset obj-exp key val))
-                 (evalo-env-list `(,obj-exp ,key ,val) env `(,(jobj bindings) ,key^ ,val^) store store~ next-address next-address~)
-                 (== value (jobj `((,key^ . ,val^) . ,bindings)))
-                 (absento-keys key^ bindings)))
+                 (evalo/propagation evalo-env-list `(,obj-exp ,key ,val) env (value-list `(,(jobj bindings) ,key^ ,val^))
+                                    store store~ store~
+                                    next-address next-address~ next-address~
+                                    (== value (jobj `((,key^ . ,val^) . ,bindings)))
+                                    (absento-keys key^ bindings))))
          ((fresh (obj-exp bindings bindings-updated key key^ val val^ v) ;; Update field
                  (== exp (jset obj-exp key val))
-                 (evalo-env-list `(,obj-exp ,key ,val) env `(,(jobj bindings) ,key^ ,val^) store store~ next-address next-address~)
-                 (membero `(,key^ . ,v) bindings)
-                 (updato bindings key^ val^ bindings-updated)
-                 (== value (jobj bindings-updated))))
+                 (evalo/propagation evalo-env-list `(,obj-exp ,key ,val) env (value-list `(,(jobj bindings) ,key^ ,val^))
+                                 store store~ store~
+                                 next-address next-address~ next-address~
+                                 (membero `(,key^ . ,v) bindings)
+                                 (updato bindings key^ val^ bindings-updated)
+                                 (== value (jobj bindings-updated)))))
          ((fresh (obj-exp bindings-prev bindings key key^ store^ next-address^) ;; Delete field
                  (== exp (jdel obj-exp key))
-                 (evalo-env obj-exp env (jobj bindings-prev) store store^ next-address next-address^)
-                 (evalo-env key env key^ store^ store~ next-address^ next-address~)
-                 (deleto bindings-prev key^ bindings)
-                 (== value (jobj bindings))))
+                 (evalo/propagation evalo-env-list `(,obj-exp ,key) env (value-list `(,(jobj bindings-prev) ,key^))
+                                    store store~ store~
+                                    next-address next-address~ next-address~
+                                    (evalo-env key env key^ store^ store~ next-address^ next-address~)
+                                    (deleto bindings-prev key^ bindings)
+                                    (== value (jobj bindings)))))
          ((fresh (ref ref^ next-address^ store^) ;; Allocate memory
                  (== exp (jall ref))
-                 (evalo-env ref env ref^ store store^ next-address next-address^)
-                 (appendo store^ ref^ store~)
-                 (incremento next-address^ next-address~)
-                 (== value (jref next-address))))
+                 (evalo/propagation evalo-env ref env ref^
+                                    store store^ store~
+                                    next-address next-address^ next-address~
+                                    (appendo store^ ref^ store~)
+                                    (incremento next-address^ next-address~)
+                                    (== value (jref next-address)))))
          ((fresh (addr-exp addr) ;; Fetch from memory
                  (== exp (jderef addr-exp))
-                 (evalo-env addr-exp env (jref addr) store store~ next-address next-address~)
-                 (indexo store addr value)))
+                 (evalo/propagation evalo-env addr-exp env (jref addr)
+                                    store store~ store~
+                                    next-address next-address~ next-address~
+                                    (indexo store addr value))))
          ((fresh (var val addr val^ store^) ;; Assign to memory
                  (== exp (jass var val))
-                 (evalo-env-list `(,var ,val) env `(,(jref addr) ,val^) store store^ next-address next-address~)
-                 (set-indexo store^ addr val^ store~)
-                 (== value val^)))
+                 (evalo/propagation evalo-env-list `(,var ,val) env (value-list `(,(jref addr) ,val^))
+                                    store store^ store~
+                                    next-address next-address~ next-address~
+                                    (set-indexo store^ addr val^ store~)
+                                    (== value val^))))
          ((fresh (first second dummy) ;; Begin-discard
                  (== exp (jbeg first second))
-                 (evalo-env-list `(,first ,second) env `(,dummy ,value) store store~ next-address next-address~)))
+                 (evalo/propagation evalo-env-list `(,first ,second) env (value-list `(,dummy ,value))
+                                    store store~ store~ next-address next-address~ next-address~)))
          ((fresh (cond cond^ then else store^ next-address^) ;; If statements
                  (== exp (jif cond then else))
-                 (evalo-env cond env cond^ store store^ next-address next-address^)
-                 (conde ((== cond^ (jbool #t)) (evalo-env then env value store^ store~ next-address^ next-address~))
-                        ((== cond^ (jbool #f)) (evalo-env else env value store^ store~ next-address^ next-address~)))))
+                 (evalo/propagation evalo-env cond env cond^
+                                    store store^ store~
+                                    next-address next-address^ next-address~
+                                    (conde ((== cond^ (jbool #t)) (evalo-env then env value store^ store~ next-address^ next-address~))
+                                           ((== cond^ (jbool #f)) (evalo-env else env value store^ store~ next-address^ next-address~))))))
          ((fresh (cond body)
                  (== exp (jwhile cond body))
                  (evalo-env (jif cond (jbeg body (jwhile cond body)) (jundef))
                             env value store store~ next-address next-address~)))
          ))
 
-(define-syntax-rule (evalo/propagation evalo-func exp env val store store~ next-address next-address~ cont ...)
-  (fresh (intermediate-val label bval store^ next-address^)
+(define-syntax-rule (evalo/propagation evalo-func exp env val
+                                       store store^ store~
+                                       next-address next-address^ next-address~
+                                       cont ...)
+  (fresh (intermediate-val label bval)
          (evalo-func exp env intermediate-val store store^ next-address next-address^)
          (conde ((== (jbrk label bval) intermediate-val)
                  (== `(,val ,store~ ,next-address~) `(,intermediate-val ,store^ ,next-address^)))
-                ((=/= (jbrk label bval) intermediate-val) cont ...))))
+                ((=/= (jbrk label bval) intermediate-val) (== val intermediate-val) cont ...))))
 
 (define (evalo-env-list elist env vlist store store~ next-address next-address~)
-  (conde ((== elist `()) (== vlist `()) (== store store~) (== next-address next-address~))
-         ((fresh (exp exp-rest val vrest value-rest store^ next-address^)
+  (conde ((== elist `()) (== vlist (value-list `())) (== store store~) (== next-address next-address~))
+         ((fresh (exp exp-rest val value-rest value-rest^ store^ next-address^)
                  (== elist `(,exp . ,exp-rest))
-                 (evalo/propagation evalo-env exp env val store store^ next-address next-address^
+                 (evalo/propagation evalo-env exp env val
+                                    store store^ store~
+                                    next-address next-address^ next-address~
                                     (evalo/propagation evalo-env-list exp-rest env value-rest
-                                                       store^ store~ next-address^ next-address~
-                                                       (== vrest (value-list value-rest))
-                                                       (== vlist `(,val . ,rest))))))))
+                                                       store^ store~ store~
+                                                       next-address^ next-address~ next-address~
+                                                       (== value-rest (value-list value-rest^))
+                                                       (== vlist (value-list `(,val . ,value-rest^)))))))))
 
 (define (incremento in out)
   (== out `(,in)))
