@@ -21,14 +21,14 @@
                  (== exp (jfun params body))
                  (== value (jclo params body env))
                  (== `(,store . ,next-address) `(,store~ . ,next-address~))))
-         ((fresh (closure params args args-eval body cenv cenv^ zipped store^ store^^ next-address^ next-address^^ args-eval-list) ;; Function application
+         ((fresh (closure params args args-eval body cenv cenv^ zipped store^ next-address^) ;; Function application
                  (== exp (japp closure args))
                  (evalo/propagation evalo-env-list `(,closure . ,args)  env (value-list `(,(jclo params body cenv) . ,args-eval))
-                                    store store^^ store~
-                                    next-address next-address^^ next-address~
+                                    store store^ store~
+                                    next-address next-address^ next-address~
                                     (zipo zipped params args-eval)
                                     (extendo cenv zipped cenv^)
-                                    (evalo-env body cenv^ value store^^ store~ next-address^^ next-address~))))
+                                    (evalo-env body cenv^ value store^ store~ next-address^ next-address~))))
          ((fresh (obj-exp bindings key key^) ;; Get
                  (== exp (jget obj-exp key))
                  (evalo/propagation evalo-env-list `(,key ,obj-exp) env (value-list `(,key^ ,(jobj bindings)))
