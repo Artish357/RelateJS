@@ -23,16 +23,12 @@
                  (== `(,store . ,next-address) `(,store~ . ,next-address~))))
          ((fresh (closure params args args-eval body cenv cenv^ zipped store^ store^^ next-address^ next-address^^ args-eval-list) ;; Function application
                  (== exp (japp closure args))
-                 (evalo/propagation evalo-env closure env (jclo params body cenv)
-                                    store store^ store~
-                                    next-address next-address^ next-address~
-                                    (evalo/propagation evalo-env-list args env args-eval-list
-                                                       store^ store^^ store~
-                                                       next-address^ next-address^^ next-address~
-                                                       (== args-eval-list (value-list args-eval))
-                                                       (zipo zipped params args-eval)
-                                                       (extendo cenv zipped cenv^)
-                                                       (evalo-env body cenv^ value store^^ store~ next-address^^ next-address~)))))
+                 (evalo/propagation evalo-env-list `(,closure . ,args)  env (value-list `(,(jclo params body cenv) . ,args-eval))
+                                    store store^^ store~
+                                    next-address next-address^^ next-address~
+                                    (zipo zipped params args-eval)
+                                    (extendo cenv zipped cenv^)
+                                    (evalo-env body cenv^ value store^^ store~ next-address^^ next-address~))))
          ((fresh (obj-exp bindings key key^) ;; Get
                  (== exp (jget obj-exp key))
                  (evalo/propagation evalo-env-list `(,key ,obj-exp) env (value-list `(,key^ ,(jobj bindings)))
@@ -51,11 +47,11 @@
          ((fresh (obj-exp bindings bindings-updated key key^ val val^ v) ;; Update field
                  (== exp (jset obj-exp key val))
                  (evalo/propagation evalo-env-list `(,obj-exp ,key ,val) env (value-list `(,(jobj bindings) ,key^ ,val^))
-                                 store store~ store~
-                                 next-address next-address~ next-address~
-                                 (membero `(,key^ . ,v) bindings)
-                                 (updato bindings key^ val^ bindings-updated)
-                                 (== value (jobj bindings-updated)))))
+                                    store store~ store~
+                                    next-address next-address~ next-address~
+                                    (membero `(,key^ . ,v) bindings)
+                                    (updato bindings key^ val^ bindings-updated)
+                                    (== value (jobj bindings-updated)))))
          ((fresh (obj-exp bindings-prev bindings key key^ store^ next-address^) ;; Delete field
                  (== exp (jdel obj-exp key))
                  (evalo/propagation evalo-env-list `(,obj-exp ,key) env (value-list `(,(jobj bindings-prev) ,key^))
