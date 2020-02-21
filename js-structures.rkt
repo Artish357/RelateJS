@@ -53,16 +53,16 @@
   `(if ,cond ,then ,else))
 
 (define (jundef)
-  `undefined)
+  `(undefined))
 
 (define (jnul)
-  `null)
+  `(null))
 
 (define (jwhile cond body)
   `(while ,cond ,body))
 
 (define (jbrk label value)
-  `(jbreak ,label ,value))
+  `(break ,label ,value))
 
 (define (jfin try-exp fin-exp)
   `(finally ,try-exp ,fin-exp))

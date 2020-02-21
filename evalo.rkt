@@ -96,11 +96,12 @@
                  (== exp (jwhile cond body))
                  (evalo-env (jif cond (jbeg body (jwhile cond body)) (jundef))
                             env value store store~ next-address next-address~)))
-         ((fresh (try-exp finally-exp try-value store^ next-address^) ;; Finally
+         ((fresh (try-exp finally-exp try-value store^ next-address^ dummy) ;; Finally
                  (== exp (jfin try-exp finally-exp))
                  (evalo-env try-exp env try-value store store^ next-address next-address^)
-                 (evalo-env (jbeg finally-exp try-value) env value store^ store~ next-address next-address~)))
-         ((fresh (label label^ try-exp catch-var catch-exp try-value store^ next-address^ env^ break-value) ;; Catch
+                 (evalo/propagation evalo-env-list `(,finally-exp ,try-value) env `(,dummy ,value)
+                                  store^ store~ store~ next-address next-address~ next-address~)))
+         ((fresh (label label^ try-exp catch-var catch-exp try-value store^ next-address^ env^ break-value first rest) ;; Catch
                  (== exp (jcatch label try-exp catch-var catch-exp break-value))
                  (evalo-env try-exp env try-value store store^ next-address next-address^)
                  (conde ((== try-value (jbrk label break-value)) ;; Exception was caught
@@ -109,18 +110,21 @@
                         ((== try-value (jbrk label^ break-value)) ;; Break does not match label
                          (=/= label^ label)
                          (== `(,value ,store~ ,next-address~) `(,try-value ,store^ ,next-address^)))
-                        ((=/= try-value (jbrk label^ break-value)) ;; No break was caught
+                        ((== try-value `(,first . ,rest)) ;; No break was caught
+                         (=/= first `break)
                          (== `(,value ,store~ ,next-address~) `(,try-value ,store^ ,next-address^))))))))
 
 (define-syntax-rule (evalo/propagation evalo-func exp env val
                                        store store^ store~
                                        next-address next-address^ next-address~
                                        cont ...)
-  (fresh (intermediate-val label bval)
+  (fresh (intermediate-val label bval tag rest)
          (evalo-func exp env intermediate-val store store^ next-address next-address^)
          (conde ((== (jbrk label bval) intermediate-val)
                  (== `(,val ,store~ ,next-address~) `(,intermediate-val ,store^ ,next-address^)))
-                ((=/= (jbrk label bval) intermediate-val) (== val intermediate-val) cont ...))))
+                ((== `(,tag . ,rest) intermediate-val)
+                 (=/= tag `break)
+                 (== val intermediate-val) cont ...))))
 
 (define (evalo-env-list elist env vlist store store~ next-address next-address~)
   (conde ((== elist `()) (== vlist (value-list `())) (== store store~) (== next-address next-address~))
