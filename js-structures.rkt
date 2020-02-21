@@ -1,7 +1,8 @@
 #lang racket
 (provide jlet jfun jclo japp jget jset jdel jvar
          jobj jref jderef jass jall jbeg jbool
-         jif jundef jnul jwhile jbrk value-list)
+         jif jundef jnul jwhile jbrk jfin jcatch
+         value-list)
 
 (define (jlet key value exp)
   `(let ,key ,value ,exp))
@@ -62,6 +63,12 @@
 
 (define (jbrk label value)
   `(jbreak ,label ,value))
+
+(define (jfin try-exp fin-exp)
+  `(finally ,try-exp ,fin-exp))
+
+(define (jcatch label try-exp catch-var catch-exp)
+  `(catch ,label ,try-exp ,catch-var ,catch-exp))
 
 (define (value-list values)
   (cons `value-list values))
