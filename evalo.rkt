@@ -102,7 +102,7 @@
                  (evalo/propagation evalo-env-list `(,finally-exp ,try-value) env `(,dummy ,value)
                                   store^ store~ store~ next-address next-address~ next-address~)))
          ((fresh (label label^ try-exp catch-var catch-exp try-value store^ next-address^ env^ break-value first rest) ;; Catch
-                 (== exp (jcatch label try-exp catch-var catch-exp break-value))
+                 (== exp (jcatch label try-exp catch-var catch-exp))
                  (evalo-env try-exp env try-value store store^ next-address next-address^)
                  (conde ((== try-value (jbrk label break-value)) ;; Exception was caught
                          (extendo env `(,catch-var . ,break-value) env^)
