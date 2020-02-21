@@ -100,12 +100,12 @@
                  (== exp (jfin try-exp finally-exp))
                  (evalo-env try-exp env try-value store store^ next-address next-address^)
                  (evalo-env (jbeg finally-exp try-value) env value store^ store~ next-address next-address~)))
-         ((fresh (label label^ try-exp catch-var catch-exp try-value store^ next-value^ env^ break-value) ;; Catch
+         ((fresh (label label^ try-exp catch-var catch-exp try-value store^ next-address^ env^ break-value) ;; Catch
                  (== exp (jcatch label try-exp catch-var catch-exp break-value))
-                 (evalo-env try-exp env try-value store store^ next-value next-value^)
+                 (evalo-env try-exp env try-value store store^ next-address next-address^)
                  (conde ((== try-value (jbrk label break-value)) ;; Exception was caught
                          (extendo env `(,catch-var . ,break-value) env^)
-                         (evalo-env catch-exp env^ value store^ store~ next-value^ next-value~))
+                         (evalo-env catch-exp env^ value store^ store~ next-address^ next-address~))
                         ((== try-value (jbrk label^ break-value)) ;; Break does not match label
                          (=/= label^ label)
                          (== `(,value ,store~ ,next-address~) `(,try-value ,store^ ,next-address^)))
