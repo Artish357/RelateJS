@@ -1,5 +1,5 @@
 #lang racket
-(provide jlet jfun jclo japp jget jset jdel jvar
+(provide jlet jfun jclo japp jget jset jdel jvar jnum
          jobj jref jderef jass jall jbeg jbool
          jif jundef jnul jwhile jbrk jfin jcatch
          value-list)
@@ -27,6 +27,9 @@
 
 (define (jvar var)
   `(var ,var))
+
+(define (jnum n)
+  `(number ,n))
 
 (define (jobj bindings)
   `(object ,bindings))

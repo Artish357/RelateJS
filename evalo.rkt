@@ -6,7 +6,7 @@
   (fresh (store^ next-address^) (evalo-env exp `() val `() store^ `() next-address^)))
 
 (define (evalo-env exp env value store store~ next-address next-address~)
-  (conde ((conde ((numbero exp)) ((objecto exp)) ((closuro exp)) ((referenso exp)) ((== exp (jundef))) ((boolo exp))) ;; Values
+  (conde ((conde ((jnumbero exp)) ((objecto exp)) ((closuro exp)) ((referenso exp)) ((== exp (jundef))) ((boolo exp))) ;; Values
           (== exp value)
           (== `(,store . ,next-address) `(,store~ . ,next-address~)))
          ((fresh (key exp2 env2) ;; Let
@@ -244,6 +244,9 @@
   (fresh (first rest)
          (== `(,first . ,rest) lst)
          (conde ((== first item)) ((membero item rest)))))
+
+(define (jnumbero exp)
+  (fresh (n) (== exp (jnum n))))
 
 (define (objecto exp)
   (fresh (binds) (== exp (jobj binds))))
