@@ -96,5 +96,17 @@
              (run* (val) (evalo (japp testfunc `(,(jbool #f))) val))
              `(,(jnum 0)))
       )
+    (let ([breakval (jbrk `error `e)])
+      
+      (test= "Basic break"
+             (run* (val) (evalo breakval val))
+             `(,breakval))
+      (test= "Basic catch"
+             (run* (val) (evalo (jcatch `error breakval `err-var (jvar `err-var)) val))
+             `(e))
+      (test= "Basic catch, wrong label"
+             (run* (val) (evalo (jcatch `loop-break breakval `err-var (jvar `err-var)) val))
+             `(,breakval))
+      )
     )
   )

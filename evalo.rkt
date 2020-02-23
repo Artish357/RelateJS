@@ -6,7 +6,7 @@
   (fresh (store^ next-address^) (evalo-env exp `() val `() store^ `() next-address^)))
 
 (define (evalo-env exp env value store store~ next-address next-address~)
-  (conde ((conde ((jnumbero exp)) ((objecto exp)) ((closuro exp)) ((referenso exp)) ((== exp (jundef))) ((boolo exp))) ;; Values
+  (conde ((conde ((jnumbero exp)) ((objecto exp)) ((closuro exp)) ((referenso exp)) ((breako exp)) ((== exp (jundef))) ((boolo exp))) ;; Values
           (== exp value)
           (== `(,store . ,next-address) `(,store~ . ,next-address~)))
          ((fresh (key exp2 env2) ;; Let
@@ -105,7 +105,7 @@
                  (== exp (jcatch label try-exp catch-var catch-exp))
                  (evalo-env try-exp env try-value store store^ next-address next-address^)
                  (conde ((== try-value (jbrk label break-value)) ;; Exception was caught
-                         (extendo env `(,catch-var . ,break-value) env^)
+                         (appendo env `(,catch-var . ,break-value) env^)
                          (evalo-env catch-exp env^ value store^ store~ next-address^ next-address~))
                         ((== try-value (jbrk label^ break-value)) ;; Break does not match label
                          (=/= label^ label)
@@ -259,3 +259,6 @@
 
 (define (boolo exp)
   (fresh (b) (== exp (jbool b))))
+
+(define (breako exp)
+  (fresh (label value) (== exp (jbrk label value))))
