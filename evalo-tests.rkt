@@ -97,10 +97,12 @@
              `(,(jnum 0)))
       )
     (let ([breakval (jbrk `error `e)])
-      
       (test= "Basic break"
              (run* (val) (evalo breakval val))
              `(,breakval))
+      (test= "Catch, no break"
+             (run* (val) (evalo (jcatch `error (jnum 0) `err-var (jvar `err-var)) val))
+             `(,(jnum 0)))
       (test= "Basic catch"
              (run* (val) (evalo (jcatch `error breakval `err-var (jvar `err-var)) val))
              `(e))
