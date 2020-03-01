@@ -1,5 +1,6 @@
 #lang racket
-(provide jlet jfun jclo japp jget jset jdel jvar jnum
+(include "arithmetic.scm")
+(provide jlet jfun jclo japp jget jset jdel jvar jrawnum jnum
          jobj jref jderef jass jall jbeg jbool
          jif jundef jnul jwhile jbrk jfin jcatch
          value-list)
@@ -28,8 +29,11 @@
 (define (jvar var)
   `(var ,var))
 
-(define (jnum n)
+(define (jrawnum n)
   `(number ,n))
+
+(define (jnum n)
+  `(number ,(build-num n)))
 
 (define (jobj bindings)
   `(object ,bindings))
@@ -75,3 +79,6 @@
 
 (define (value-list values)
   (cons `value-list values))
+
+(define (jstr str)
+  `(string ,(map (compose1 build-num char->integer) (string->list str))))
