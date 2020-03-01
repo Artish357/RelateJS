@@ -1,12 +1,13 @@
 #lang racket
-(require "faster-miniKanren/mk.rkt" "js-structures.rkt")
+(require "faster-miniKanren/mk.rkt" "js-structures.rkt" "arithmetic.rkt")
 (provide evalo evalo-env)
 
 (define (evalo exp val)
   (fresh (store^ next-address^) (evalo-env exp `() val `() store^ `() next-address^)))
 
 (define (evalo-env exp env value store store~ next-address next-address~)
-  (conde ((conde ((jnumbero exp)) ((objecto exp)) ((closuro exp)) ((referenso exp)) ((breako exp)) ((== exp (jundef))) ((boolo exp))) ;; Values
+  (conde ((conde ((jnumbero exp)) ((objecto exp)) ((closuro exp)) ((referenso exp)) ((breako exp)) ((boolo exp)) ((jstro exp))
+                 ((== exp (jundef))) ((== exp (jnul)))) ;; Values
           (== exp value)
           (== `(,store . ,next-address) `(,store~ . ,next-address~)))
          ((fresh (key exp2 env2) ;; Let
@@ -100,7 +101,7 @@
                  (== exp (jfin try-exp finally-exp))
                  (evalo-env try-exp env try-value store store^ next-address next-address^)
                  (evalo/propagation evalo-env-list `(,finally-exp ,try-value) env `(,dummy ,value)
-                                  store^ store~ store~ next-address next-address~ next-address~)))
+                                    store^ store~ store~ next-address next-address~ next-address~)))
          ((fresh (label label^ try-exp catch-var catch-exp try-value store^ next-address^ env^ break-value first rest) ;; Catch
                  (== exp (jcatch label try-exp catch-var catch-exp))
                  (evalo-env try-exp env try-value store store^ next-address next-address^)
@@ -112,7 +113,68 @@
                          (== `(,value ,store~ ,next-address~) `(,try-value ,store^ ,next-address^)))
                         ((== try-value `(,first . ,rest)) ;; No break was caught
                          (=/= first `break)
-                         (== `(,value ,store~ ,next-address~) `(,try-value ,store^ ,next-address^))))))))
+                         (== `(,value ,store~ ,next-address~) `(,try-value ,store^ ,next-address^))))))
+         ((jepsilono env exp value store store~ next-address next-address~))
+         ))
+
+(define (jepsilono env exp value store store~ next-address next-address~)
+  (fresh (func vals op1 op2 v1 v2 temp vals^ value^ rem)
+         (== exp (jepsilon func vals))
+         (evalo/propagation evalo-env-list vals env (value-list vals^)
+                            store store~ store~
+                            next-address next-address~ next-address~
+                            (conde ((== `(,func (,op1)) `(typeof ,vals^)) ;; Typeof
+                                    (typeofo op1 value))
+                                   ((== `(,v1 ,v2) vals^) ;; Number operations
+                                    (typeofo v1 (jstr "number"))
+                                    (typeofo v2 (jstr "number"))
+                                    (== `(,(jrawnum op1) ,(jrawnum op2)) vals^)
+                                    (conde ((== func `+) (pluso op1 op2 value^) (== value (jrawnum value^)))
+                                           ((== func `-) (minuso op1 op2 value^) (== value (jrawnum value^)))
+                                           ((== func `*) (*o op1 op2 value^) (== value (jrawnum value^)))
+                                           ((== func `/) (/o op1 op2 value^ rem) (== value (jrawnum value^)))
+                                           ((== func `<) (conde ((<o op1 op2) (== value (jbool #t)))
+                                                                ((<=o op2 op1) (== value (jbool #f)))))
+                                           ))
+                                   ((== `(,v1 ,v2) vals^) ;; String operations
+                                    (typeofo v1 (jstr "string"))
+                                    (typeofo v2 (jstr "string"))
+                                    (== `(,(jrawstr op1) ,(jrawstr op2)) vals^)
+                                    (conde ((== func `string-+) (extendo op1 op2 value^) (== value (jrawstr value^)))
+                                           ((== func `string-<) (string-lesso op1 op2 value))))
+                                   ((== `(,v1) vals^) ;; Char -> nat
+                                    (typeofo v1 (jstr "string"))
+                                    (== `(,(jrawstr `(,op1))) vals^)
+                                    (== func `char->nat)
+                                    (== value (jrawnum op1)))
+                                   ((== `(,v1) vals^) ;; Char -> nat
+                                    (typeofo v1 (jstr "number"))
+                                    (== `(,(jrawnum op1)) vals^)
+                                    (== func `nat->char)
+                                    (== value (jrawstr `(,op1))))))
+         ))
+
+(define (typeofo exp value)
+  (fresh (temp)(conde ((== exp (jundef))
+                       (== value (jstr "undefined")))
+                      ((== exp (jnul)) ;; According to node, it is actually "object"
+                       (== value (jstr "null")))
+                      ((== exp `(string . ,temp)) ;; For all of these, the prefixes are hardcoded
+                       (== value (jstr "string")))
+                      ((== exp  `(number . ,temp))
+                       (== value (jstr "number")))
+                      ((== exp  `(boolean . ,temp)) 
+                       (== value (jstr "boolean")))
+                      ((== exp  `(object . ,temp)) 
+                       (== value (jstr "object"))))))
+
+(define (string-lesso s1 s2 value)
+  (fresh (x x^ y y^ rest)
+  (conde ((== s1 `()) (== s2 `(,x . ,rest)) (== value (jbool #t)))
+         ((== s2 `()) (== s1 `(,x . ,rest)) (== value (jbool #f)))
+         ((== s1 `(,x . ,x^)) (== s2 `(,x . ,y^)) (string-lesso x^ y^ value))
+         ((== s1 `(,x . ,x^)) (== s2 `(,y . ,y^)) (=/= x y) (<o x y) (== value (jbool #t)))
+         ((== s1 `(,x . ,x^)) (== s2 `(,y . ,y^)) (=/= x y) (<=o y x) (== value (jbool #f))))))
 
 (define-syntax-rule (evalo/propagation evalo-func exp env val
                                        store store^ store~
@@ -183,11 +245,11 @@
                  ))))
 
 (define (extendo s t r)
-  (conde ((== t `()) (== r s))
-         ((fresh (r^ tel trest)
-                 (== t `(,tel . ,trest))
-                 (== r `(,tel . ,r^))
-                 (extendo `(,tel . ,s) trest r^)))))
+  (conde ((== s `()) (== t r))
+         ((fresh (r^ sel srest)
+                 (== r `(,sel . ,r^))
+                 (== s `(,sel . ,srest))
+                 (extendo srest t r^)))))
 
 (define (zipo l keys values)
   (conde ((== keys `()) (== values `()) (== l `()))
@@ -246,7 +308,10 @@
          (conde ((== first item)) ((membero item rest)))))
 
 (define (jnumbero exp)
-  (fresh (n) (== exp (jnum n))))
+  (fresh (n val) (== exp (cons (car (jnum 0)) val))))
+
+(define (jstro exp)
+  (fresh (n val) (== exp (cons (car (jstr "")) val))))
 
 (define (objecto exp)
   (fresh (binds) (== exp (jobj binds))))
