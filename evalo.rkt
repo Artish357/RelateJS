@@ -134,8 +134,7 @@
                                            ((== func `*) (*o op1 op2 value^) (== value (jrawnum value^)))
                                            ((== func `/) (/o op1 op2 value^ rem) (== value (jrawnum value^)))
                                            ((== func `<) (conde ((<o op1 op2) (== value (jbool #t)))
-                                                                ((<=o op2 op1) (== value (jbool #f)))))
-                                           ))
+                                                                ((<=o op2 op1) (== value (jbool #f)))))))
                                    ((== `(,v1 ,v2) vals^) ;; String operations
                                     (typeofo v1 (jstr "string"))
                                     (typeofo v2 (jstr "string"))
@@ -147,12 +146,11 @@
                                     (== `(,(jrawstr `(,op1))) vals^)
                                     (== func `char->nat)
                                     (== value (jrawnum op1)))
-                                   ((== `(,v1) vals^) ;; Char -> nat
+                                   ((== `(,v1) vals^) ;; Nat -> char
                                     (typeofo v1 (jstr "number"))
                                     (== `(,(jrawnum op1)) vals^)
                                     (== func `nat->char)
-                                    (== value (jrawstr `(,op1))))))
-         ))
+                                    (== value (jrawstr `(,op1))))))))
 
 (define (typeofo exp value)
   (fresh (temp)(conde ((== exp (jundef))
@@ -170,11 +168,11 @@
 
 (define (string-lesso s1 s2 value)
   (fresh (x x^ y y^ rest)
-  (conde ((== s1 `()) (== s2 `(,x . ,rest)) (== value (jbool #t)))
-         ((== s2 `()) (== value (jbool #f)))
-         ((== s1 `(,x . ,x^)) (== s2 `(,x . ,y^)) (string-lesso x^ y^ value))
-         ((== s1 `(,x . ,x^)) (== s2 `(,y . ,y^)) (=/= x y) (<o x y) (== value (jbool #t)))
-         ((== s1 `(,x . ,x^)) (== s2 `(,y . ,y^)) (=/= x y) (<=o y x) (== value (jbool #f))))))
+         (conde ((== s1 `()) (== s2 `(,x . ,rest)) (== value (jbool #t)))
+                ((== s2 `()) (== value (jbool #f)))
+                ((== s1 `(,x . ,x^)) (== s2 `(,x . ,y^)) (string-lesso x^ y^ value))
+                ((== s1 `(,x . ,x^)) (== s2 `(,y . ,y^)) (=/= x y) (<o x y) (== value (jbool #t)))
+                ((== s1 `(,x . ,x^)) (== s2 `(,y . ,y^)) (=/= x y) (<=o y x) (== value (jbool #f))))))
 
 (define-syntax-rule (evalo/propagation evalo-func exp env val
                                        store store^ store~
