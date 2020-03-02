@@ -1,5 +1,5 @@
 #lang racket
-(require "faster-miniKanren/mk.rkt" "js-structures.rkt" "arithmetic.rkt")
+(require "faster-miniKanren/mk.rkt" "js-structures.rkt" "faster-miniKanren/numbers.rkt")
 (provide evalo evalo-env)
 
 (define (evalo exp val)
@@ -114,12 +114,12 @@
                         ((== try-value `(,first . ,rest)) ;; No break was caught
                          (=/= first `break)
                          (== `(,value ,store~ ,next-address~) `(,try-value ,store^ ,next-address^))))))
-         ((jepsilono env exp value store store~ next-address next-address~))
+         ((jdeltao env exp value store store~ next-address next-address~))
          ))
 
-(define (jepsilono env exp value store store~ next-address next-address~)
+(define (jdeltao env exp value store store~ next-address next-address~)
   (fresh (func vals op1 op2 v1 v2 temp vals^ value^ rem)
-         (== exp (jepsilon func vals))
+         (== exp (jdelta func vals))
          (evalo/propagation evalo-env-list vals env (value-list vals^)
                             store store~ store~
                             next-address next-address~ next-address~
@@ -156,7 +156,7 @@
   (fresh (temp)(conde ((== exp (jundef))
                        (== value (jstr "undefined")))
                       ((== exp (jnul)) ;; According to node, it is actually "object"
-                       (== value (jstr "null")))
+                       (== value (jstr "object")))
                       ((== exp `(string . ,temp)) ;; For all of these, the prefixes are hardcoded
                        (== value (jstr "string")))
                       ((== exp  `(number . ,temp))

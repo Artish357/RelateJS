@@ -1,9 +1,9 @@
 #lang racket
-(require "arithmetic.rkt")
+(require "faster-miniKanren/numbers.rkt")
 (provide jlet jfun jclo japp jget jset jdel jvar jrawnum jnum
          jobj jref jderef jass jall jbeg jbool
          jif jundef jnul jwhile jbrk jfin jcatch
-         value-list jepsilon jrawstr jstr jnul)
+         value-list jdelta jrawstr jstr jnul)
 
 (define (jlet key value exp)
   `(let ,key ,value ,exp))
@@ -86,5 +86,5 @@
 (define (jstr str)
   `(string ,(map (compose1 build-num char->integer) (string->list str))))
 
-(define (jepsilon fun vals)
-  `(epsilon ,fun ,vals))
+(define (jdelta fun vals)
+  `(delta ,fun ,vals))

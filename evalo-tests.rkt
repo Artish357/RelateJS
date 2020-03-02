@@ -112,45 +112,45 @@
       )
     )
     (test= "typeof"
-           (map (lambda (x) (run* (val) (evalo (jepsilon `typeof `(,x)) val))) (list (jundef) (jnul) (jnum 42) (jstr "Hello") (jbool #f)))
-           (map (lambda (x) `(,(jstr x))) (list "undefined" "null" "number" "string" "boolean")))
+           (map (lambda (x) (run* (val) (evalo (jdelta `typeof `(,x)) val))) (list (jundef) (jnul) (jnum 42) (jstr "Hello") (jbool #f)))
+           (map (lambda (x) `(,(jstr x))) (list "undefined" "object" "number" "string" "boolean")))
   (test= "+"
-         (run* (res) (evalo (jepsilon `+ `(,(jnum 20) ,(jnum 10))) res))
+         (run* (res) (evalo (jdelta `+ `(,(jnum 20) ,(jnum 10))) res))
          `(,(jnum 30)))
   (test= "-"
-         (run* (res) (evalo (jepsilon `- `(,(jnum 20) ,(jnum 10))) res))
+         (run* (res) (evalo (jdelta `- `(,(jnum 20) ,(jnum 10))) res))
          `(,(jnum 10)))
   (test= "*"
-         (run* (res) (evalo (jepsilon `* `(,(jnum 20) ,(jnum 10))) res))
+         (run* (res) (evalo (jdelta `* `(,(jnum 20) ,(jnum 10))) res))
          `(,(jnum 200)))
   (test= "/"
-         (run* (res) (evalo (jepsilon `/ `(,(jnum 20) ,(jnum 10))) res))
+         (run* (res) (evalo (jdelta `/ `(,(jnum 20) ,(jnum 10))) res))
          `(,(jnum 2)))
   (test= "< #1"
-         (run* (res) (evalo (jepsilon `< `(,(jnum 20) ,(jnum 10))) res))
+         (run* (res) (evalo (jdelta `< `(,(jnum 20) ,(jnum 10))) res))
          `(,(jbool #f)))
   (test= "< #2"
-         (run* (res) (evalo (jepsilon `< `(,(jnum 10) ,(jnum 20))) res))
+         (run* (res) (evalo (jdelta `< `(,(jnum 10) ,(jnum 20))) res))
          `(,(jbool #t)))
   (test= "string-+"
-         (run* (res) (evalo (jepsilon `string-+ `(,(jstr "Hello") ,(jstr "World"))) res))
+         (run* (res) (evalo (jdelta `string-+ `(,(jstr "Hello") ,(jstr "World"))) res))
          `(,(jstr "HelloWorld")))
   (test= "string-< #1"
-         (run* (res) (evalo (jepsilon `string-< `(,(jstr "Hell") ,(jstr "Hello"))) res))
+         (run* (res) (evalo (jdelta `string-< `(,(jstr "Hell") ,(jstr "Hello"))) res))
          `(,(jbool #t)))
   (test= "string-< #2"
-         (run* (res) (evalo (jepsilon `string-< `(,(jstr "Helloo") ,(jstr "Hello"))) res))
+         (run* (res) (evalo (jdelta `string-< `(,(jstr "Helloo") ,(jstr "Hello"))) res))
          `(,(jbool #f)))
   (test= "string-< #3"
-         (run* (res) (evalo (jepsilon `string-< `(,(jstr "Helal") ,(jstr "Helbl"))) res))
+         (run* (res) (evalo (jdelta `string-< `(,(jstr "Helal") ,(jstr "Helbl"))) res))
          `(,(jbool #t)))
   (test= "string-< #4"
-         (run* (res) (evalo (jepsilon `string-< `(,(jstr "Helbl") ,(jstr "Helal"))) res))
+         (run* (res) (evalo (jdelta `string-< `(,(jstr "Helbl") ,(jstr "Helal"))) res))
          `(,(jbool #f)))
   (test= "string-< #5"
-         (run* (res) (evalo (jepsilon `string-< `(,(jstr "H") ,(jstr "H"))) res))
+         (run* (res) (evalo (jdelta `string-< `(,(jstr "H") ,(jstr "H"))) res))
          `(,(jbool #f)))
-  (test= "Combined epsilon test" ;; chr(ord('a')+2) -> 'c' 
-         (run* (res) (evalo (jepsilon `nat->char `(,(jepsilon `+ `(,(jepsilon `char->nat `(,(jstr "a"))) ,(jnum 2))))) res))
+  (test= "Combined delta test" ;; chr(ord('a')+2) -> 'c' 
+         (run* (res) (evalo (jdelta `nat->char `(,(jdelta `+ `(,(jdelta `char->nat `(,(jstr "a"))) ,(jnum 2))))) res))
          `(,(jstr "c")))
   )
