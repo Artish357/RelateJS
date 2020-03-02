@@ -141,7 +141,16 @@
   (test= "string-< #2"
          (run* (res) (evalo (jepsilon `string-< `(,(jstr "Helloo") ,(jstr "Hello"))) res))
          `(,(jbool #f)))
-  (test= "Combined test"
+  (test= "string-< #3"
+         (run* (res) (evalo (jepsilon `string-< `(,(jstr "Helal") ,(jstr "Helbl"))) res))
+         `(,(jbool #t)))
+  (test= "string-< #4"
+         (run* (res) (evalo (jepsilon `string-< `(,(jstr "Helbl") ,(jstr "Helal"))) res))
+         `(,(jbool #f)))
+  (test= "string-< #5"
+         (run* (res) (evalo (jepsilon `string-< `(,(jstr "H") ,(jstr "H"))) res))
+         `(,(jbool #f)))
+  (test= "Combined epsilon test" ;; chr(ord('a')+2) -> 'c' 
          (run* (res) (evalo (jepsilon `nat->char `(,(jepsilon `+ `(,(jepsilon `char->nat `(,(jstr "a"))) ,(jnum 2))))) res))
          `(,(jstr "c")))
   )

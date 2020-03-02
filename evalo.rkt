@@ -171,7 +171,7 @@
 (define (string-lesso s1 s2 value)
   (fresh (x x^ y y^ rest)
   (conde ((== s1 `()) (== s2 `(,x . ,rest)) (== value (jbool #t)))
-         ((== s2 `()) (== s1 `(,x . ,rest)) (== value (jbool #f)))
+         ((== s2 `()) (== value (jbool #f)))
          ((== s1 `(,x . ,x^)) (== s2 `(,x . ,y^)) (string-lesso x^ y^ value))
          ((== s1 `(,x . ,x^)) (== s2 `(,y . ,y^)) (=/= x y) (<o x y) (== value (jbool #t)))
          ((== s1 `(,x . ,x^)) (== s2 `(,y . ,y^)) (=/= x y) (<=o y x) (== value (jbool #f))))))
