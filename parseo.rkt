@@ -1,0 +1,38 @@
+#lang racket
+(require "js-structures.rkt" "faster-miniKanren/mk.rkt" "evalo.rkt")
+(provide pull-varo pull-varo-list pull-pairso pull-varo-pairs)
+
+(define (pull-varo exp vars)
+  (fresh (e erest)
+         (conde ((== `(,exp . ,vars) `(() . ())))
+                ((== exp `(var . ,vars)))
+                ((== exp `(,e . ,erest))
+                 (=/= e `var)
+                 (pull-varo-list erest vars))
+                )
+         ))
+
+
+(define (pull-varo-list exp-list vars)
+  (fresh (e erest v vrest)
+         (conde ((== `(,exp-list . ,vars) `(() . ())))
+                ((== exp-list `(,e . ,erest))
+                 (pull-varo e v)
+                 (pull-varo-list erest vrest)
+                 (extendo v vrest vars))
+                )))
+
+(define (pull-pairso vars pairs)
+  (conde ((== `(,vars . ,pairs) `(() . ())))
+         ((fresh (var val name rest v-rest)
+                 (== vars `(,var . ,v-rest))
+                 (conde ((== var `(,name ,val)))
+                        ((symbolo var)
+                         (== `(,name . ,val) `(,var . undefined))))
+                 (pull-pairso v-rest rest)
+                 (== pairs `((,name . ,val) . ,rest))))))
+
+(define (pull-varo-pairs exp pairs)
+  (fresh (vars)
+         (pull-varo exp vars)
+         (pull-pairso vars pairs)))

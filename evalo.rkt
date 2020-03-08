@@ -1,6 +1,6 @@
 #lang racket
 (require "faster-miniKanren/mk.rkt" "js-structures.rkt" "faster-miniKanren/numbers.rkt")
-(provide evalo evalo-env)
+(provide evalo evalo-env extendo appendo)
 
 (define (evalo exp val)
   (fresh (store^ next-address^) (evalo-env exp `() val `() store^ `() next-address^)))
