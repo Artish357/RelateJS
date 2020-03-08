@@ -1,10 +1,11 @@
 #lang racket
 (require "js-structures.rkt" "faster-miniKanren/mk.rkt" "evalo.rkt")
-(provide pull-varo pull-varo-list pull-pairso pull-varo-pairs)
+(provide pull-varo pull-varo-list pull-pairso pull-varo-pairs humanize dehumanize)
 
 (define (pull-varo exp vars)
   (fresh (e erest)
          (conde ((== `(,exp . ,vars) `(() . ())))
+                ((== exp `(function . ,erest)) (== vars `()))
                 ((== exp `(var . ,vars)))
                 ((== exp `(,e . ,erest))
                  (=/= e `var)
@@ -36,3 +37,17 @@
   (fresh (vars)
          (pull-varo exp vars)
          (pull-pairso vars pairs)))
+
+(define/match (mknum->num x)
+  [((list)) 0]
+  [((cons d rest)) (+ d (* 2 (mknum->num rest)))])
+
+(define/match (dehumanize exp)
+  [((? string?)) (jstr exp)]
+  [((? integer?)) (jnum exp)]
+  [((? list?)) (map dehumanize exp)])
+
+(define/match (humanize exp)
+  [((list `string x)) (list->string (map (compose integer->char mknum->num) x))]
+  [((list `number x)) (mknum->num x)]
+  [((? list?)) (map humanize exp)])
