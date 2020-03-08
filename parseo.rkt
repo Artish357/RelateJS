@@ -2,10 +2,53 @@
 (require "js-structures.rkt" "faster-miniKanren/mk.rkt" "evalo.rkt")
 (provide pull-varo pull-varo-list pull-pairso pull-varo-pairs humanize dehumanize)
 
+(define (parseo exp jexp)
+  (conde ((fresh (val index)
+                 (== exp `(@ ,val ,index))
+                 (== jexp (jget val index))))
+         ((fresh (var val)
+                 (== exp `(:= ,var ,val))))
+         ((functiono exp jexp))
+         ))
+
+(define (parseo-h exp jexp)
+  (parseo (dehumanize exp) jexp))
+
+(define (functiono exp jexp)
+  (fresh (params body body^ body^^ vars)
+         (== exp `(function ,params . ,body))
+         (begino body body^)
+         (pull-varo-pairs body^ vars)
+         (conde ((== vars `())  (== body^^ body^))
+                ((=/= vars `())
+                 (leto vars body^ body^^)
+                 ))
+         (== jexp (jfun params body^^))
+         ))
+
+(define (leto vars cont jexp)
+  (fresh (k v rest jexp-rest)
+         (== vars `((,k . ,v) . ,rest))
+         (conde ((== rest `())
+                 (== jexp (jlet k v cont)))
+                ((=/= rest `())
+                 (leto rest cont jexp-rest)
+                 (== jexp (jlet k v jexp-rest))))))
+
+(define (begino lst jexp)
+  (conde ((== lst `()) (== jexp `()))
+         ((fresh (e rest rest^)
+                 (== lst `(,e . ,rest))
+                 (conde ((== rest `()) (== jexp e))
+                        ((=/= rest `()) 
+                         (begino rest rest^)
+                         (== jexp (jbeg e rest^))))))))
+
 (define (pull-varo exp vars)
   (fresh (e erest)
          (conde ((== `(,exp . ,vars) `(() . ())))
                 ((== exp `(function . ,erest)) (== vars `()))
+                ((symbolo exp) (== vars `()))
                 ((== exp `(var . ,vars)))
                 ((== exp `(,e . ,erest))
                  (=/= e `var)
@@ -45,9 +88,11 @@
 (define/match (dehumanize exp)
   [((? string?)) (jstr exp)]
   [((? integer?)) (jnum exp)]
-  [((? list?)) (map dehumanize exp)])
+  [((? list?)) (map dehumanize exp)]
+  [(_) exp])
 
 (define/match (humanize exp)
   [((list `string x)) (list->string (map (compose integer->char mknum->num) x))]
   [((list `number x)) (mknum->num x)]
-  [((? list?)) (map humanize exp)])
+  [((? list?)) (map humanize exp)]
+  [(_) exp])
