@@ -1,7 +1,7 @@
 #lang racket
 (require "faster-miniKanren/numbers.rkt")
 (provide jlet jfun jclo japp jget jset jdel jvar jrawnum jnum
-         jobj jref jderef jass jall jbeg jbool
+         jobj jref jderef jassign jall jbeg jbool
          jif jundef jnul jwhile jbrk jfin jcatch
          value-list jdelta jrawstr jstr jnul)
 
@@ -47,7 +47,7 @@
 (define (jderef address)
   `(deref ,address))
 
-(define (jass var val)
+(define (jassign var val)
   `(assign ,var ,val))
 
 (define (jbeg first second)

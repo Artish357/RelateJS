@@ -76,7 +76,7 @@
                                     next-address next-address~ next-address~
                                     (indexo store addr value))))
          ((fresh (var val addr val^ store^) ;; Assign to memory
-                 (== exp (jass var val))
+                 (== exp (jassign var val))
                  (evalo/propagation evalo-env-list `(,var ,val) env (value-list `(,(jref addr) ,val^))
                                     store store^ store~
                                     next-address next-address~ next-address~
