@@ -6,6 +6,14 @@
 ;; Global scope vars
 ;; Object fields (as addresses?)
 ;; Implementation of finally (+ labels?)
+;; How to determine if a function is in first place
+;; do nothing
+
+;; Missing syntax:
+;; for
+;; switch
+;; primitive
+;; function call
 
 (define (parseo exp jexp)
   (conde ((fresh (var val var^ val^) ;; Assignment
@@ -18,10 +26,18 @@
                  (== exp `(try ,try-exp catch ,catch-exp))
                  (parseo-list `(,try-exp ,catch-exp) `(,try-exp^ ,catch-exp^))
                  (== jexp (jcatch `error try-exp^ catch-exp^))))
-         ((fresh (try-exp catch-exp try-exp^ catch-exp^) ;; Try/catch/finally 
+         ((fresh (try-exp catch-exp try-exp^ catch-exp^ finally-exp finally-exp^) ;; Try/catch/finally 
                  (== exp `(try ,try-exp catch ,catch-exp finally ,finally-exp))
                  (parseo-list `(,try-exp ,catch-exp ,finally-exp) `(,try-exp^ ,catch-exp^ ,finally-exp^))
-                 (== jexp (jbeg (jcatch `error try-exp^ catch-exp^) finally-exp^))) ;; QUESTIONABLE!
+                 (== jexp (jbeg (jcatch `error try-exp^ catch-exp^) finally-exp^)))) ;; QUESTIONABLE!
+         ((fresh (cond then else cond^ then^ else^)
+                 (== exp `(if ,cond ,then ,else))
+                 (parseo-list `(,cond ,then ,else) `(,cond^ ,then^ ,else^))
+                 (== jexp (jif cond^ then^ else^))))
+         ((fresh (cond body cond^ body^)
+                 (== exp `(while cond body cond^ body^))
+                 (parseo-list `(,cond ,body) `(,cond^ ,body^))
+                 (jwhile cond^ (jcatch `break body^ `undefined))))
          ((parse-expo exp jexp)) ;; Expressions
          ))
 
