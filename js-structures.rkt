@@ -88,3 +88,5 @@
 
 (define (jdelta fun vals)
   `(delta ,fun ,vals))
+
+(define (jpass) `pass)
