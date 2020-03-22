@@ -1,112 +1,140 @@
 #lang racket
 (require "js-structures.rkt" "faster-miniKanren/mk.rkt" "evalo.rkt")
-(provide pull-varo pull-varo-list pull-pairso pull-var-nameso humanize dehumanize)
+(provide pull-varo pull-varo-list pull-pairso pull-names-listo humanize dehumanize)
 
 ;; Stuff that's unclear:
-;; Global scope vars
-;; Object fields (as addresses?)
 ;; Implementation of finally (+ labels?)
-;; How to determine if a function is in first place
-;; do nothing
+;; Object declaration
+;; Aren't functions supposed to be modeled as objects
 
 ;; Missing syntax:
 ;; for
-;; switch
 ;; primitive
-;; function call
+
+;; need to rewrite var parser
 
 (define (parseo exp jexp)
-  (conde ((fresh (var val var^ val^) ;; Assignment
-                 (== exp `(:= ,var ,val))
-                 (lh-parseo var var^)
-                 (parseo val val^)
-                 (== jexp (jassign var^ val^))))
-         ((varo exp jexp)) ;; Var
+  (conde ((varo exp jexp)) ;; Var
+         ;; different breaks
+         ((fresh (val val^)  ;; return
+                 (== exp `(return ,val))
+                 (parse-expo val val^)
+                 (== jexp (jthrow `return val^))))
+         ((fresh (val val^)  ;; throw
+                 (== exp `(throw ,val))
+                 (parse-expo val val^)
+                 (== jexp (jthrow `error val^))))
+         ((fresh (val)  ;; break
+                 (== exp  `(break))
+                 (== jexp (jthrow `break (jundef)))))
          ((fresh (try-exp catch-exp try-exp^ catch-exp^) ;; Try/catch
                  (== exp `(try ,try-exp catch ,catch-exp))
-                 (parseo-list `(,try-exp ,catch-exp) `(,try-exp^ ,catch-exp^))
-                 (== jexp (jcatch `error try-exp^ catch-exp^))))
+                 (parse-listo `(,try-exp ,catch-exp) `(,try-exp^ ,catch-exp^))
+                 (== jexp (jcatch `error try-exp^ `e catch-exp^)))) ;; TODO: dedicated variable
          ((fresh (try-exp catch-exp try-exp^ catch-exp^ finally-exp finally-exp^) ;; Try/catch/finally 
                  (== exp `(try ,try-exp catch ,catch-exp finally ,finally-exp))
-                 (parseo-list `(,try-exp ,catch-exp ,finally-exp) `(,try-exp^ ,catch-exp^ ,finally-exp^))
-                 (== jexp (jbeg (jcatch `error try-exp^ catch-exp^) finally-exp^)))) ;; QUESTIONABLE!
-         ((fresh (cond then else cond^ then^ else^)
+                 (parse-listo `(,try-exp ,catch-exp ,finally-exp) `(,try-exp^ ,catch-exp^ ,finally-exp^))
+                 (== jexp (jbeg (jcatch `error try-exp^ `e catch-exp^) finally-exp^)))) ;; QUESTIONABLE!
+         ((fresh (cond then else cond^ then^ else^) ;; if statements
                  (== exp `(if ,cond ,then ,else))
-                 (parseo-list `(,cond ,then ,else) `(,cond^ ,then^ ,else^))
+                 (parse-expo cond cond^)
+                 (parse-listo `(,then ,else) `(,then^ ,else^))
                  (== jexp (jif cond^ then^ else^))))
-         ((fresh (cond body cond^ body^)
-                 (== exp `(while cond body cond^ body^))
-                 (parseo-list `(,cond ,body) `(,cond^ ,body^))
-                 (jwhile cond^ (jcatch `break body^ `undefined))))
+         ((fresh (cond body cond^ body^) ;; while statements
+                 (== exp `(while cond body))
+                 (parse-expo cond cond^)
+                 (parseo body body^)
+                 (== jexp (jcatch `break (jwhile cond^ body^) `e (jundef)))))
+         ((fresh () (switcho exp jexp)))
+         ((fresh (exps exps^)
+                 (== exp `(begin . ,exps))
+                 (parse-listo exps exps^)
+                 (begino exps^ jexp)))
          ((parse-expo exp jexp)) ;; Expressions
          ))
 
 (define (parse-expo exp jexp)
-  (conde ((fresh (val index) ;; Field getter
+  (conde ((fresh (val val^ index index^) ;; Field getter
                  (== exp `(@ ,val ,index))
-                 (== jexp (jderef (jget val index)))))
+                 (parse-exp-listo `(,val ,index) `(,val^ ,index^))
+                 (== jexp (jderef (jget val^ index^)))))
+         ((fresh (func args func^ args^) ;; Function call
+                 (== exp `(call ,func . ,args))
+                 (parse-exp-listo `(,func . ,args) `(,func^ . ,args^))
+                 (== jexp (jcatch `return (japp func^ args^) `result (jvar `result)))))
          ((functiono exp jexp)) ;; Functions
-         ;; different breaks
-         ((fresh (val)  ;; return
-                 (== exp `(return ,val))
-                 (== jexp (jbrk `return val))))
-         ((fresh (val)  ;; throw
-                 (== exp `(throw ,val))
-                 (== jexp (jbrk `error val))))
-         ((fresh (val)  ;; break
-                 (== exp `break)
-                 (== jexp (jbrk `break `undefined))))
+         ((fresh (var val var^ val^) ;; Assignment
+                 (== exp `(:= ,var ,val))
+                 (lh-parseo var var^)
+                 (parse-expo val val^)
+                 (== jexp (jassign var^ val^))))
+         ((fresh (op vals vals^) ;; Basic operations
+                 (== exp `(op ,op . ,vals))
+                 (parse-exp-listo vals vals^)
+                 (== jexp (jdelta op vals^))))
          ;; primitive values
          ((fresh (x)
-                 (== exp (jrawnum x))
+                 (== exp `(number ,x))
                  (== exp jexp)))
          ((fresh (x)
-                 (== exp (jrawstr x))
+                 (== exp `(string ,x))
                  (== exp jexp)))
-         ((symbolo exp) (== jexp (jderef exp)))
+         ((fresh (x)
+                 (== exp `(object ,x))
+                 (== exp jexp)))
+         ((symbolo exp) (== jexp (jderef (jvar exp))))
+         ((== exp (jundef)) (== jexp (jundef)))
+         ((== exp (jnul)) (== jexp (jnul)))
          ))
 
 (define (parse-foro exp jexp)
   (conde ((parse-expo exp jexp))
          ((varo exp jexp))))
 
-(define (parseo-list lst jlst)
+(define (parse-listo lst jlst)
   (fresh (p p^ rest rest^)
          (conde ((== lst `()) (== jlst `()))
                 ((== lst `(,p . ,rest))
                  (parseo p p^)
-                 (parseo-list rest rest^)
+                 (parse-listo rest rest^)
+                 (== jlst `(,p^ . ,rest^))))))
+
+(define (parse-exp-listo lst jlst)
+  (fresh (p p^ rest rest^)
+         (conde ((== lst `()) (== jlst `()))
+                ((== lst `(,p . ,rest))
+                 (parse-expo p p^)
+                 (parse-exp-listo rest rest^)
                  (== jlst `(,p^ . ,rest^))))))
 
 (define (parseo-h exp jexp)
-  (parseo (dehumanize exp) jexp))
+  (let ([exp (dehumanize exp)])
+    (fresh (vars exp^ allocations body)
+           (pull-names-listo `(,exp) vars)
+           (allocato vars body jexp)
+           (parseo exp body))))
 
 (define (lh-parseo exp jexp)
   (conde ((symbolo exp) (== jexp (jvar exp)))
          ((fresh (obj val)
                  (== exp `(@ ,obj ,val))
-                 (== jexp (jget obj val))))))
+                 (== jexp (jbeg (jset obj val (jall (jundef))) (jget obj val))))))) ;; inefficient! TODO: fix
 
 (define (varo exp jexp)
   (fresh (vars pairs)
          (== exp `(var . ,vars))
          (pull-pairso vars pairs)
-         (conde ((== pairs `()) (== jexp `undefined)) ;; TODO: temporary?
+         (conde ((== pairs `()) (== jexp (jundef))) ;; TODO: temporary?
                 ((=/= pairs `()) (pair-assigno pairs jexp)))))
 
 (define (functiono exp jexp)
   (fresh (params body body^ body^^ body^^^ vars vars^)
          (== exp `(function ,params . ,body))
-         (parseo-list body body^)
+         (parse-listo body body^)
          (begino body^ body^^)
-         (pull-var-nameso body vars) ;; TODO: needs to operate on a list
-         (pado vars `undefined vars^)
-         (conde ((== vars^ `())  (== body^^^ body^^))
-                ((=/= vars^ `())
-                 (leto vars^ body^^ body^^^)
-                 ))
-         (== jexp (jfun params body^^^))
-         ))
+         (pull-names-listo body vars) ;; TODO: needs to operate on a list
+         (allocato vars body^^ vars^)
+         (== jexp (jfun params body^^))))
 
 (define (leto vars cont jexp)
   (fresh (k v rest jexp-rest)
@@ -126,18 +154,73 @@
                          (begino rest rest^)
                          (== jexp (jbeg e rest^))))))))
 
+(define (switcho exp jexp) ;; TODO: optimize with a helper
+  (fresh (val target body val^ target^ body^ rest rest-exp)
+         (conde ((== exp `(switch ,val))
+                 (== jexp (jundef)))
+                ((== exp `(switch ,val (,target ,body) . ,rest))
+                 (parse-exp-listo `(,val ,target) `(,val^ ,target^))
+                 (parseo body body^)
+                 (switcho `(switch ,val . ,rest) rest-exp) ;; Is this good practice?
+                 (== jexp (jif (jdelta `=== `(,val^ ,target^)) body^ rest-exp))))))
+
 (define (pull-varo exp vars)
   (fresh (e erest)
          (conde ((== `(,exp . ,vars) `(() . ())))
-                ((== exp `(function . ,erest)) (== vars `()))
-                ((symbolo exp) (== vars `()))
                 ((== exp `(var . ,vars)))
-                ((== exp `(,e . ,erest))
-                 (=/= e `var)
-                 (pull-varo-list erest vars))
-                )
-         ))
-
+                ((== exp `(function . ,erest)) (== vars `()))
+                ((fresh (x)
+                        (== exp `(throw ,x))
+                        (pull-varo x vars)))
+                ((fresh (x)
+                        (== exp `(return ,x))
+                        (pull-varo x vars)))
+                ((fresh (x)
+                        (== exp `(break))
+                        (== vars `())))
+                ((fresh (try-exp catch-exp v1 v2)
+                        (== exp `(try ,try-exp catch ,catch-exp))
+                        (pull-varo-list `(,try-exp ,catch-exp) vars)))
+                ((fresh (try-exp catch-exp finally-exp)
+                        (== exp `(try ,try-exp catch ,catch-exp finally ,finally-exp))
+                        (pull-varo-list `(,try-exp ,catch-exp ,finally-exp) vars)))
+                ((fresh (cond then else v1 v2 v3 v^)
+                        (== exp `(if ,cond ,then ,else))
+                        (pull-varo-list `(,cond ,then ,else) vars)))
+                ((fresh (cond body v1 v2)
+                        (== exp `(while ,cond ,body))
+                        (pull-varo-list `(,cond ,body) vars)))
+                ((fresh (x)
+                        (== exp `(switch . ,x)) ;; TODO: doesn't pull
+                        (== vars `())))
+                ((fresh (exps)
+                        (== exp `(begin . ,exps))
+                        (pull-varo-list exps vars)))
+                ((fresh (val index v1 v2)
+                        (== exp `(@ ,val ,index)) ;; TODO: Is it possible to introduce vars there?
+                        (pull-varo-list `(,val ,index) vars)))
+                ((fresh (func args)
+                        (== exp `(call ,func . ,args))
+                        (pull-varo-list args vars)))
+                ((fresh (var val)
+                        (== exp `(:= ,var ,val))
+                        (pull-varo-list `(,val ,var) vars)))
+                ((fresh (op vals)
+                        (== exp `(op ,op . ,vals))
+                        (pull-varo-list vals vars)))
+                ((fresh (x)
+                        (== exp `(number ,x))
+                        (== vars `())))
+                ((fresh (x)
+                        (== exp `(string ,x))
+                        (== vars `())))
+                ((fresh (x)
+                        (== exp `(object ,x))
+                        (== vars `())))
+                ((== exp (jundef)) (== vars `()))
+                ((== exp (jnul)) (== vars `()))
+                ((symbolo exp) (== vars `()))
+                )))
 
 (define (pull-varo-list exp-list vars)
   (fresh (e erest v vrest)
@@ -145,7 +228,7 @@
                 ((== exp-list `(,e . ,erest))
                  (pull-varo e v)
                  (pull-varo-list erest vrest)
-                 (extendo v vrest vars))
+                 (appendo vrest v vars))
                 )))
 
 (define (pull-pairso vars pairs)
@@ -153,9 +236,8 @@
          ((fresh (var val name rest v-rest)
                  (== vars `(,var . ,v-rest))
                  (conde ((== var `(,name ,val))
-                         (== pairs `((,name . ,val) . ,rest)))
+                         (== pairs `((,name ,val) . ,rest)))
                         ((symbolo var)
-                         (== `(,name . ,val) `(,var . undefined))
                          (== pairs rest)))
                  (pull-pairso v-rest rest)))))
 
@@ -169,36 +251,30 @@
                          (== names `(,var . ,rest))))
                  (pull-nameso v-rest rest)))))
 
-(define (pull-varo-pairs exp pairs)
-  (fresh (vars)
-         (pull-varo exp vars)
-         (pull-pairso vars pairs)))
-
-(define (pull-var-nameso exp names)
+(define (pull-names-listo exp names)
   (fresh (vars)
          (pull-varo-list exp vars)
-         (pull-nameso vars names)
-         ))
+         (pull-nameso vars names)))
 
 (define (pair-assigno pairs jexp)
   (fresh (var val var^ val^ rest jexp^)
-         (conde ((== pairs `((,var . ,val)))
+         (conde ((== pairs `((,var ,val)))
                  (lh-parseo var var^)
                  (parseo val val^)
                  (== jexp (jassign var^ val^)))
-                ((== pairs `((,var . ,val) . ,rest))
+                ((== pairs `((,var ,val) . ,rest))
                  (=/= rest `())
                  (pair-assigno rest jexp^)
                  (lh-parseo var var^)
                  (parseo val val^)
                  (== jexp (jbeg (jassign var^ val^) jexp^))))))
 
-(define (pado list el out)
+(define (allocato list cont out)
   (fresh (a b rest rest-padded)
-         (conde ((== `(,list . ,out) `(() . ())))
+         (conde ((== `(,list . ,out) `(() . ,cont)))
                 ((== list `(,a . ,rest))
-                 (== out `((,a . ,el) . ,rest-padded))
-                 (pado rest el rest-padded)))))
+                 (== out (jlet a (jall (jnum 13)) (jbeg (jassign (jvar a) (jundef)) rest-padded)))
+                 (allocato rest cont rest-padded)))))
 
 (define/match (mknum->num x)
   [((list)) 0]
@@ -215,3 +291,4 @@
   [((list `number x)) (mknum->num x)]
   [((? list?)) (map humanize exp)]
   [(_) exp])
+

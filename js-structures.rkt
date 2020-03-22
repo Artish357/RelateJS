@@ -2,7 +2,7 @@
 (require "faster-miniKanren/numbers.rkt")
 (provide jlet jfun jclo japp jget jset jdel jvar jrawnum jnum
          jobj jref jderef jassign jall jbeg jbool
-         jif jundef jnul jwhile jbrk jfin jcatch
+         jif jundef jnul jwhile jbrk jthrow jfin jcatch
          value-list jdelta jrawstr jstr jnul)
 
 (define (jlet key value exp)
@@ -67,6 +67,9 @@
 
 (define (jwhile cond body)
   `(while ,cond ,body))
+
+(define (jthrow label value)
+  `(throw ,label ,value))
 
 (define (jbrk label value)
   `(break ,label ,value))

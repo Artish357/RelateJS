@@ -80,10 +80,10 @@
            (run* (val store next-address) (evalo-env (jderef (jref `())) `() val `(,(jnum 123)) store `(()) next-address))
            `((,(jnum 123) (,(jnum 123))  (()) )))
     (test= "Assignment"
-           (run* (val store next-address) (evalo-env (jass (jref `()) (jnum 5)) `() val `(,(jnum 0)) store `(()) next-address))
+           (run* (val store next-address) (evalo-env (jassign (jref `()) (jnum 5)) `() val `(,(jnum 0)) store `(()) next-address))
            `((,(jnum 5) (,(jnum 5))  (()) )))
     (test= "Combined memory functions"
-           (run* (val store next-address) (evalo-env (jass (jall (jnum 66)) (jderef (jref `()))) `() val `(,(jnum 33)) store `(()) next-address))
+           (run* (val store next-address) (evalo-env (jassign (jall (jnum 66)) (jderef (jref `()))) `() val `(,(jnum 33)) store `(()) next-address))
            `((,(jnum 33) (,(jnum 33) ,(jnum 33))  ((())) )))
     (let ((testfunc (jfun `(x)
                           (jbeg

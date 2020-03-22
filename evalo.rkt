@@ -1,6 +1,6 @@
 #lang racket
 (require "faster-miniKanren/mk.rkt" "js-structures.rkt" "faster-miniKanren/numbers.rkt")
-(provide evalo evalo-env extendo appendo)
+(provide evalo evalo-env appendo)
 
 (define (evalo exp val)
   (fresh (store^ next-address^) (evalo-env exp `() val `() store^ `() next-address^)))
@@ -10,10 +10,11 @@
                  ((== exp (jundef))) ((== exp (jnul)))) ;; Values
           (== exp value)
           (== `(,store . ,next-address) `(,store~ . ,next-address~)))
-         ((fresh (key exp2 env2) ;; Let
-                 (== exp (jlet key value exp2))
-                 (== env2 `((,key . ,value) . ,env))
-                 (evalo-env exp2 env2 value store store~ next-address next-address~)))
+         ((fresh (k v v^ exp2 env2 store^ next-address^) ;; Let
+                 (== exp (jlet k v exp2))
+                 (evalo-env v env v^ store store^ next-address next-address^)
+                 (== env2 `((,k . ,v^) . ,env))
+                 (evalo-env exp2 env2 value store^ store~ next-address^ next-address~)))
          ((fresh (var) ;; Look up a variable
                  (== exp (jvar var))
                  (lookupo var env value)
@@ -28,7 +29,7 @@
                                     store store^ store~
                                     next-address next-address^ next-address~
                                     (zipo zipped params args-eval)
-                                    (extendo cenv zipped cenv^)
+                                    (appendo cenv zipped cenv^)
                                     (evalo-env body cenv^ value store^ store~ next-address^ next-address~))))
          ((fresh (obj-exp bindings key key^) ;; Get
                  (== exp (jget obj-exp key))
@@ -66,7 +67,7 @@
                  (evalo/propagation evalo-env ref env ref^
                                     store store^ store~
                                     next-address next-address^ next-address~
-                                    (appendo store^ ref^ store~)
+                                    (appendo store^ `(,ref^) store~)
                                     (incremento next-address^ next-address~)
                                     (== value (jref next-address)))))
          ((fresh (addr-exp addr) ;; Fetch from memory
@@ -75,7 +76,7 @@
                                     store store~ store~
                                     next-address next-address~ next-address~
                                     (indexo store addr value))))
-         ((fresh (var val addr val^ store^) ;; Assign to memory
+         ((fresh (var val addr val^ store^) ;; Assign to memory address
                  (== exp (jassign var val))
                  (evalo/propagation evalo-env-list `(,var ,val) env (value-list `(,(jref addr) ,val^))
                                     store store^ store~
@@ -106,7 +107,7 @@
                  (== exp (jcatch label try-exp catch-var catch-exp))
                  (evalo-env try-exp env try-value store store^ next-address next-address^)
                  (conde ((== try-value (jbrk label break-value)) ;; Exception was caught
-                         (appendo env `(,catch-var . ,break-value) env^)
+                         (appendo env `((,catch-var . ,break-value)) env^)
                          (evalo-env catch-exp env^ value store^ store~ next-address^ next-address~))
                         ((== try-value (jbrk label^ break-value)) ;; Break does not match label
                          (=/= label^ label)
@@ -115,6 +116,10 @@
                          (=/= first `break)
                          (== `(,value ,store~ ,next-address~) `(,try-value ,store^ ,next-address^))))))
          ((jdeltao env exp value store store~ next-address next-address~))
+         ((fresh (label val val^)
+                 (== exp (jthrow label val))
+                 (evalo-env val env val^ store store~ next-address next-address~)
+                 (== value (jbrk label val^))))
          ))
 
 (define (jdeltao env exp value store store~ next-address next-address~)
@@ -125,6 +130,9 @@
                             next-address next-address~ next-address~
                             (conde ((== `(,func (,op1)) `(typeof ,vals^)) ;; Typeof
                                     (typeofo op1 value))
+                                   ((== `(,func ,vals) `(=== (,v1 ,v2)))
+                                    (conde ((== v1 v2) (== value #t))
+                                           ((=/= v1 v2) (== value #f))))
                                    ((== `(,v1 ,v2) vals^) ;; Number operations
                                     (typeofo v1 (jstr "number"))
                                     (typeofo v2 (jstr "number"))
@@ -139,7 +147,7 @@
                                     (typeofo v1 (jstr "string"))
                                     (typeofo v2 (jstr "string"))
                                     (== `(,(jrawstr op1) ,(jrawstr op2)) vals^)
-                                    (conde ((== func `string-+) (extendo op1 op2 value^) (== value (jrawstr value^)))
+                                    (conde ((== func `string-+) (appendo op1 op2 value^) (== value (jrawstr value^)))
                                            ((== func `string-<) (string-lesso op1 op2 value))))
                                    ((== `(,v1) vals^) ;; Char -> nat
                                     (typeofo v1 (jstr "string"))
@@ -242,12 +250,12 @@
                          (deleto orest key rrest)))
                  ))))
 
-(define (extendo s t r)
+(define (appendo s t r)
   (conde ((== s `()) (== t r))
          ((fresh (r^ sel srest)
                  (== r `(,sel . ,r^))
                  (== s `(,sel . ,srest))
-                 (extendo srest t r^)))))
+                 (appendo srest t r^)))))
 
 (define (zipo l keys values)
   (conde ((== keys `()) (== values `()) (== l `()))
@@ -255,9 +263,7 @@
                  (== keys `(,k . ,krest))
                  (== values `(,v . ,vrest))
                  (== l `((,k . ,v) . ,l^))
-                 (zipo l^ krest vrest))))
-  )
-
+                 (zipo l^ krest vrest)))))
 
 (define (not-in-list el list)
   (conde
@@ -273,13 +279,6 @@
          (conde
           ((== y x) (== v t))
           ((=/= y x) (lookupo x rest t)))))
-
-(define (appendo list item result)
-  (conde ((== list `()) (== result `(,item)))
-         ((fresh (l lrest rrest)
-                 (== list `(,l . ,lrest))
-                 (== result `(,l . ,rrest))
-                 (appendo lrest item rrest)))))
 
 (define (indexo lst index result)
   (fresh (l lrest index^)

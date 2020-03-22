@@ -20,4 +20,6 @@
   (test= "Human interface functions"
          (humanize (dehumanize (list 1 "hello" 1337)))
          (list 1 "hello" 1337))
+  (let [f! (lambda (x) `(begin (var (f! (function (x) (return (op + x (call f! (op - x 1))))))) (call f! ,x)))]
+    )
   )
