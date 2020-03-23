@@ -1,6 +1,6 @@
 #lang racket
 (require "js-structures.rkt" "faster-miniKanren/mk.rkt" "evalo.rkt")
-(provide pull-varo pull-varo-list pull-pairso pull-names-listo humanize dehumanize parseo-h)
+(provide pull-varo pull-varo-list pull-pairso pull-names-listo humanize dehumanize parseo parseo-h)
 
 ;; Stuff that's unclear:
 ;; Implementation of finally (+ labels?)
@@ -14,7 +14,16 @@
 ;; need to rewrite var parser
 
 (define (parseo exp jexp)
-  (conde ((varo exp jexp)) ;; Var
+  (conde ((parse-expo exp jexp)) ;; Expressions
+         ((fresh (exps exps^) ;; Begin
+                 (== exp `(begin . ,exps))
+                 (parse-listo exps exps^)
+                 (begino exps^ jexp)))
+         ((fresh (cond then else cond^ then^ else^) ;; if statements
+                 (== exp `(if ,cond ,then ,else))
+                 (parse-expo cond cond^)
+                 (parse-listo `(,then ,else) `(,then^ ,else^))
+                 (== jexp (jif cond^ then^ else^))))
          ;; different breaks
          ((fresh (val val^)  ;; return
                  (== exp `(return ,val))
@@ -31,51 +40,22 @@
                  (== exp `(try ,try-exp catch ,label ,catch-exp))
                  (parse-listo `(,try-exp ,catch-exp) `(,try-exp^ ,catch-exp^))
                  (== jexp (jcatch `error try-exp^ label
-                                  (jlet `temp (jall (jnum 13))
-                                        (jbeg (jassign (jvar `temp) (jvar label))
-                                               (jlet label (jvar `temp) catch-exp^)))))))
+                                  (jlet label (jall (jvar label)) catch-exp^)))))
          ((fresh (try-exp catch-exp try-exp^ catch-exp^ finally-exp finally-exp^ label) ;; Try/catch/finally
                  (== exp `(try ,try-exp catch ,label ,catch-exp finally ,finally-exp))
                  (parse-listo `(,try-exp ,catch-exp ,finally-exp) `(,try-exp^ ,catch-exp^ ,finally-exp^))
                  (== jexp (jbeg (jcatch `error try-exp^ label catch-exp^) finally-exp^)))) ;; QUESTIONABLE!
-         ((fresh (cond then else cond^ then^ else^) ;; if statements
-                 (== exp `(if ,cond ,then ,else))
-                 (parse-expo cond cond^)
-                 (parse-listo `(,then ,else) `(,then^ ,else^))
-                 (== jexp (jif cond^ then^ else^))))
          ((fresh (cond body cond^ body^) ;; while statements
                  (== exp `(while cond body))
                  (parse-expo cond cond^)
                  (parseo body body^)
                  (== jexp (jcatch `break (jwhile cond^ body^) `e (jundef)))))
          ((fresh () (switcho exp jexp)))
-         ((fresh (exps exps^)
-                 (== exp `(begin . ,exps))
-                 (parse-listo exps exps^)
-                 (begino exps^ jexp)))
-         ((parse-expo exp jexp)) ;; Expressions
+         ((varo exp jexp)) ;; Var
          ))
 
 (define (parse-expo exp jexp)
-  (conde ((fresh (val val^ index index^) ;; Field getter
-                 (== exp `(@ ,val ,index))
-                 (parse-exp-listo `(,val ,index) `(,val^ ,index^))
-                 (== jexp (jderef (jget val^ index^)))))
-         ((fresh (func args func^ args^) ;; Function call
-                 (== exp `(call ,func . ,args))
-                 (parse-exp-listo `(,func . ,args) `(,func^ . ,args^))
-                 (== jexp (jcatch `return (japp func^ args^) `result (jvar `result)))))
-         ((functiono exp jexp)) ;; Functions
-         ((fresh (var val var^ val^) ;; Assignment
-                 (== exp `(:= ,var ,val))
-                 (lh-parseo var var^)
-                 (parse-expo val val^)
-                 (== jexp (jassign var^ val^))))
-         ((fresh (op vals vals^) ;; Basic operations
-                 (== exp `(op ,op . ,vals))
-                 (parse-exp-listo vals vals^)
-                 (== jexp (jdelta op vals^))))
-         ;; primitive values
+  (conde ;; primitive values
          ((fresh (x)
                  (== exp `(number ,x))
                  (== exp jexp)))
@@ -90,6 +70,24 @@
          ((symbolo exp) (== jexp (jderef (jvar exp))))
          ((== exp (jundef)) (== jexp (jundef)))
          ((== exp (jnul)) (== jexp (jnul)))
+         ((fresh (op vals vals^) ;; Basic operations
+                 (== exp `(op ,op . ,vals))
+                 (parse-exp-listo vals vals^)
+                 (== jexp (jdelta op vals^))))
+         ((functiono exp jexp)) ;; Functions
+         ((fresh (func args func^ args^) ;; Function call
+                 (== exp `(call ,func . ,args))
+                 (parse-exp-listo `(,func . ,args) `(,func^ . ,args^))
+                 (== jexp (jcatch `return (japp func^ args^) `result (jvar `result)))))
+         ((fresh (val val^ index index^) ;; Field getter
+                 (== exp `(@ ,val ,index))
+                 (parse-exp-listo `(,val ,index) `(,val^ ,index^))
+                 (== jexp (jderef (jget val^ index^)))))
+         ((fresh (var val var^ val^) ;; Assignment
+                 (== exp `(:= ,var ,val))
+                 (lh-parseo var var^)
+                 (parse-expo val val^)
+                 (== jexp (jassign var^ val^))))
          ))
 
 (define (parse-foro exp jexp)
@@ -281,16 +279,14 @@
   (fresh (a b rest rest-padded)
          (conde ((== `(,list . ,out) `(() . ,cont)))
                 ((== list `(,a . ,rest))
-                 (== out (jlet a (jall (jnum 13)) (jbeg (jassign (jvar a) (jundef)) rest-padded)))
+                 (== out (jlet a (jall (jundef)) rest-padded))
                  (allocato rest cont rest-padded)))))
 
 (define (assigno list cont out)
   (fresh (a b rest -rest rest-padded)
          (conde ((== `(,list . ,out) `(() . ,cont)))
                 ((== list `(,a . ,rest))
-                 (== out (jlet `temp (jall (jnum 13))
-                               (jbeg (jassign (jvar `temp) (jvar a))
-                                     (jlet a (jvar `temp) rest-padded))))
+                 (== out (jlet a (jall (jvar a)) rest-padded))
                  (assigno rest cont rest-padded)))))
 
 (define/match (mknum->num x)
