@@ -125,7 +125,7 @@
          ))
 
 (define (jdeltao env exp value store store~ next-address next-address~) ; TODO: Evaluate everything everywhere
-  (fresh (func vals op1 op2 v1 v2 v1^ v2^ temp vals^ value^ rem)
+  (fresh (func vals op1 op2 v1 v2 temp vals^ value^ rem)
          (== exp (jdelta func vals))
          (evalo/propagation evalo-env-list vals env (value-list vals^) value
                             store store~ store~
@@ -133,8 +133,8 @@
                             (conde ((== `(,func (,op1)) `(typeof ,vals^)) ;; Typeof
                                     (typeofo op1 value))
                                    ((== `(,func ,vals^) `(=== (,v1 ,v2)))
-                                    (conde ((== v1^ v2^) (== value (jbool #t)))
-                                           ((=/= v1^ v2^) (== value (jbool #f)))))
+                                    (conde ((== v1 v2) (== value (jbool #t)))
+                                           ((=/= v1 v2) (== value (jbool #f)))))
                                    ((== `(,v1 ,v2) vals^) ;; Number operations
                                     (typeofo v1 (jstr "number"))
                                     (typeofo v2 (jstr "number"))

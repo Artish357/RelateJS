@@ -236,7 +236,7 @@
                 ((== exp-list `(,e . ,erest))
                  (pull-varo e v)
                  (pull-varo-list erest vrest)
-                 (appendo vrest v vars))
+                 (appendo v vrest vars))
                 )))
 
 (define (pull-pairso vars pairs)
