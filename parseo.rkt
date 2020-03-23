@@ -1,6 +1,6 @@
 #lang racket
 (require "js-structures.rkt" "faster-miniKanren/mk.rkt" "evalo.rkt")
-(provide pull-varo pull-varo-list pull-pairso pull-names-listo humanize dehumanize)
+(provide pull-varo pull-varo-list pull-pairso pull-names-listo humanize dehumanize parseo-h)
 
 ;; Stuff that's unclear:
 ;; Implementation of finally (+ labels?)
@@ -27,14 +27,17 @@
          ((fresh (val)  ;; break
                  (== exp  `(break))
                  (== jexp (jthrow `break (jundef)))))
-         ((fresh (try-exp catch-exp try-exp^ catch-exp^) ;; Try/catch
-                 (== exp `(try ,try-exp catch ,catch-exp))
+         ((fresh (try-exp catch-exp try-exp^ catch-exp^ label) ;; Try/catch
+                 (== exp `(try ,try-exp catch ,label ,catch-exp))
                  (parse-listo `(,try-exp ,catch-exp) `(,try-exp^ ,catch-exp^))
-                 (== jexp (jcatch `error try-exp^ `e catch-exp^)))) ;; TODO: dedicated variable
-         ((fresh (try-exp catch-exp try-exp^ catch-exp^ finally-exp finally-exp^) ;; Try/catch/finally 
-                 (== exp `(try ,try-exp catch ,catch-exp finally ,finally-exp))
+                 (== jexp (jcatch `error try-exp^ label
+                                  (jlet `temp (jall (jnum 13))
+                                        (jbeg (jassign (jvar `temp) (jvar label))
+                                               (jlet label (jvar `temp) catch-exp^)))))))
+         ((fresh (try-exp catch-exp try-exp^ catch-exp^ finally-exp finally-exp^ label) ;; Try/catch/finally
+                 (== exp `(try ,try-exp catch ,label ,catch-exp finally ,finally-exp))
                  (parse-listo `(,try-exp ,catch-exp ,finally-exp) `(,try-exp^ ,catch-exp^ ,finally-exp^))
-                 (== jexp (jbeg (jcatch `error try-exp^ `e catch-exp^) finally-exp^)))) ;; QUESTIONABLE!
+                 (== jexp (jbeg (jcatch `error try-exp^ label catch-exp^) finally-exp^)))) ;; QUESTIONABLE!
          ((fresh (cond then else cond^ then^ else^) ;; if statements
                  (== exp `(if ,cond ,then ,else))
                  (parse-expo cond cond^)
@@ -82,6 +85,8 @@
          ((fresh (x)
                  (== exp `(object ,x))
                  (== exp jexp)))
+         ((== exp #t) (== jexp (jbool #t)))
+         ((== exp #f) (== jexp (jbool #f)))
          ((symbolo exp) (== jexp (jderef (jvar exp))))
          ((== exp (jundef)) (== jexp (jundef)))
          ((== exp (jnul)) (== jexp (jnul)))
@@ -128,13 +133,14 @@
                 ((=/= pairs `()) (pair-assigno pairs jexp)))))
 
 (define (functiono exp jexp)
-  (fresh (params body body^ body^^ body^^^ vars vars^)
+  (fresh (params body body^ body^^ body^^^ body^^^^ vars vars^)
          (== exp `(function ,params . ,body))
          (parse-listo body body^)
          (begino body^ body^^)
          (pull-names-listo body vars) ;; TODO: needs to operate on a list
-         (allocato vars body^^ vars^)
-         (== jexp (jfun params body^^))))
+         (allocato vars body^^ body^^^)
+         (assigno params body^^^ body^^^^)
+         (== jexp (jfun params body^^^^))))
 
 (define (leto vars cont jexp)
   (fresh (k v rest jexp-rest)
@@ -178,13 +184,13 @@
                 ((fresh (x)
                         (== exp `(break))
                         (== vars `())))
-                ((fresh (try-exp catch-exp v1 v2)
-                        (== exp `(try ,try-exp catch ,catch-exp))
+                ((fresh (try-exp catch-exp label)
+                        (== exp `(try ,try-exp catch ,label ,catch-exp))
                         (pull-varo-list `(,try-exp ,catch-exp) vars)))
-                ((fresh (try-exp catch-exp finally-exp)
-                        (== exp `(try ,try-exp catch ,catch-exp finally ,finally-exp))
+                ((fresh (try-exp catch-exp finally-exp label)
+                        (== exp `(try ,try-exp catch ,label ,catch-exp finally ,finally-exp))
                         (pull-varo-list `(,try-exp ,catch-exp ,finally-exp) vars)))
-                ((fresh (cond then else v1 v2 v3 v^)
+                ((fresh (cond then else)
                         (== exp `(if ,cond ,then ,else))
                         (pull-varo-list `(,cond ,then ,else) vars)))
                 ((fresh (cond body v1 v2)
@@ -217,6 +223,8 @@
                 ((fresh (x)
                         (== exp `(object ,x))
                         (== vars `())))
+                ((== exp #t) (== vars `()))
+                ((== exp #f) (== vars `()))
                 ((== exp (jundef)) (== vars `()))
                 ((== exp (jnul)) (== vars `()))
                 ((symbolo exp) (== vars `()))
@@ -275,6 +283,15 @@
                 ((== list `(,a . ,rest))
                  (== out (jlet a (jall (jnum 13)) (jbeg (jassign (jvar a) (jundef)) rest-padded)))
                  (allocato rest cont rest-padded)))))
+
+(define (assigno list cont out)
+  (fresh (a b rest -rest rest-padded)
+         (conde ((== `(,list . ,out) `(() . ,cont)))
+                ((== list `(,a . ,rest))
+                 (== out (jlet `temp (jall (jnum 13))
+                               (jbeg (jassign (jvar `temp) (jvar a))
+                                     (jlet a (jvar `temp) rest-padded))))
+                 (assigno rest cont rest-padded)))))
 
 (define/match (mknum->num x)
   [((list)) 0]
