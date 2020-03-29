@@ -8,50 +8,50 @@
                  (begin (printf "Running: ~s\n" name)
                         (time expr))
                  output))
-  (let ([1to6zip `((,(jnum 1) . ,(jnum 2)) (,(jnum 3) . ,(jnum 4)) (,(jnum 5) . ,(jnum 6)))]
+  (let ([1to6zip `((,(jstr "1") . ,(jnum 2)) (,(jstr "3") . ,(jnum 4)) (,(jstr "5") . ,(jnum 6)))]
         [1to3 (map jnum `(1 2 3))])
     (test= "Get #1"
-           (run* (res) (evalo (jget (jobj 1to6zip) (jnum 1)) res))
+           (run* (res) (evalo (jget (jobj 1to6zip `()) (jstr "1")) res))
            `(,(jnum 2)))
     (test= "Get #2"
-           (run* (res) (evalo (jget (jobj 1to6zip) (jnum 3)) res))
+           (run* (res) (evalo (jget (jobj 1to6zip `()) (jstr "3")) res))
            `(,(jnum 4)))
     (test= "Get #3"
-           (run* (res) (evalo (jget (jobj 1to6zip) (jnum 5)) res))
+           (run* (res) (evalo (jget (jobj 1to6zip `()) (jstr "5")) res))
            `(,(jnum 6)))
     (test= "Get, empty"
-           (run* (res) (evalo (jget (jobj `()) (jnum 1)) res))
+           (run* (res) (evalo (jget (jobj `() `()) (jstr "1")) res))
            `(,(jundef)))
     (test= "Get, not found"
-           (run* (res) (evalo (jget (jobj 1to6zip) (jnum 4)) res))
+           (run* (res) (evalo (jget (jobj 1to6zip `()) (jstr "4")) res))
            `(,(jundef)))
     (test= "Update #1"
-           (run* (res) (evalo (jset (jobj 1to6zip) (jnum 1) (jnum 100)) res))
-           `(,(jobj `((,(jnum 1) . ,(jnum 100)) . ,(cdr 1to6zip)))))
+           (run* (res) (evalo (jset (jobj 1to6zip `()) (jstr "1") (jnum 100)) res))
+           `(,(jobj `((,(jstr "1") . ,(jnum 100)) . ,(cdr 1to6zip)) `())))
     (test= "Update #2"
-           (run* (res) (evalo (jset (jobj 1to6zip) (jnum 3) (jnum 100)) res))
-           `(,(jobj `((,(jnum 1) . ,(jnum 2)) (,(jnum 3) . ,(jnum 100)) (,(jnum 5) . ,(jnum 6))))))
+           (run* (res) (evalo (jset (jobj 1to6zip `()) (jstr "3") (jnum 100)) res))
+           `(,(jobj `((,(jstr "1") . ,(jnum 2)) (,(jstr "3") . ,(jnum 100)) (,(jstr "5") . ,(jnum 6))) `())))
     (test= "Update #3"
-           (run* (res) (evalo (jset (jobj 1to6zip) (jnum 5) (jnum 100)) res))
-           `(,(jobj `((,(jnum 1) . ,(jnum 2)) (,(jnum 3) . ,(jnum 4)) (,(jnum 5) . ,(jnum 100))))))
+           (run* (res) (evalo (jset (jobj 1to6zip `()) (jstr "5") (jnum 100)) res))
+           `(,(jobj `((,(jstr "1") . ,(jnum 2)) (,(jstr "3") . ,(jnum 4)) (,(jstr "5") . ,(jnum 100))) `())))
     (test= "Create"
-           (run* (res) (evalo (jset (jobj 1to6zip) (jnum 0) (jnum 100)) res))
-           `(,(jobj `((,(jnum 0) . ,(jnum 100)) . ,1to6zip))))
+           (run* (res) (evalo (jset (jobj 1to6zip `()) (jstr "0") (jnum 100)) res))
+           `(,(jobj `((,(jstr "0") . ,(jnum 100)) . ,1to6zip) `())))
     (test= "Create, empty object"
-           (run* (res) (evalo (jset (jobj `()) (jnum 0) (jnum 100)) res))
-           `(,(jobj `((,(jnum 0) . ,(jnum 100))))))
+           (run* (res) (evalo (jset (jobj `() `()) (jstr "0") (jnum 100)) res))
+           `(,(jobj `((,(jstr "0") . ,(jnum 100))) `())))
     (test= "Delete #1"
-           (run* (res) (evalo (jdel (jobj 1to6zip) (jnum 1)) res))
-           `(,(jobj (cdr 1to6zip))))
+           (run* (res) (evalo (jdel (jobj 1to6zip `()) (jstr "1")) res))
+           `(,(jobj (cdr 1to6zip) `())))
     (test= "Delete #2"
-           (run* (res) (evalo (jdel (jobj 1to6zip) (jnum 3)) res))
-           `(,(jobj `((,(jnum 1) . ,(jnum 2)) (,(jnum 5) . ,(jnum 6))))))
+           (run* (res) (evalo (jdel (jobj 1to6zip `()) (jstr "3")) res))
+           `(,(jobj `((,(jstr "1") . ,(jnum 2)) (,(jstr "5") . ,(jnum 6))) `())))
     (test= "Delete #3"
-           (run* (res) (evalo (jdel (jobj 1to6zip) (jnum 5)) res))
-           `(,(jobj `((,(jnum 1) . ,(jnum 2)) (,(jnum 3) . ,(jnum 4))))))
+           (run* (res) (evalo (jdel (jobj 1to6zip `()) (jstr "5")) res))
+           `(,(jobj `((,(jstr "1") . ,(jnum 2)) (,(jstr "3") . ,(jnum 4))) `())))
     (test= "Delete, not found"
-           (run* (res) (evalo (jdel (jobj 1to6zip) (jnum 0)) res))
-           `(,(jobj 1to6zip)))
+           (run* (res) (evalo (jdel (jobj 1to6zip `()) (jstr "0")) res))
+           `(,(jobj 1to6zip `())))
     (test= "Variable reference #1"
            (run* (res) (evalo-env (jvar `x) `((x . 1) (y . 2) (z . 3)) res `() `() `() `()))
            `(1))
@@ -62,7 +62,7 @@
            (run* (res) (evalo-env (jvar `z) `((x . 1) (y . 2) (z . 3)) res `() `() `() `()))
            `(3))
     (test= "Function application, no parameters"
-           (run* (res) (evalo (japp (jfun `() (jget (jobj `()) (jnum 0))) `()) res))
+           (run* (res) (evalo (japp (jfun `() (jget (jobj `() `()) (jstr "0"))) `()) res))
            `(,(jundef)))
     (test= "Function application, parameter #1"
            (run* (res) (evalo (japp (jfun `(x y z) (jvar `x)) 1to3) res))
@@ -112,8 +112,8 @@
       )
     )
     (test= "typeof"
-           (map (lambda (x) (run* (val) (evalo (jdelta `typeof `(,x)) val))) (list (jundef) (jnul) (jnum 42) (jstr "Hello") (jbool #f)))
-           (map (lambda (x) `(,(jstr x))) (list "undefined" "object" "number" "string" "boolean")))
+           (map (lambda (x) (run* (val) (evalo (jdelta `typeof `(,x)) val))) (list (jundef) (jnul) (jnum 42) (jstr "Hello") (jbool #f) (jfun `() (jnul))))
+           (map (lambda (x) `(,(jstr x))) (list "undefined" "object" "number" "string" "boolean" "function")))
   (test= "+"
          (run* (res) (evalo (jdelta `+ `(,(jnum 20) ,(jnum 10))) res))
          `(,(jnum 30)))

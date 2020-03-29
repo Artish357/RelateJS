@@ -13,57 +13,67 @@
          ((fresh (k v v^ exp2 env2 store^ next-address^) ;; Let
                  (== exp (jlet k v exp2))
                  (evalo/propagation evalo-env v env v^ value
-                                  store store^ store~
-                                  next-address next-address^ next-address~
-                                  (== env2 `((,k . ,v^) . ,env))
-                                  (evalo-env exp2 env2 value store^ store~ next-address^ next-address~))))
+                                    store store^ store~
+                                    next-address next-address^ next-address~
+                                    (== env2 `((,k . ,v^) . ,env))
+                                    (evalo-env exp2 env2 value store^ store~ next-address^ next-address~))))
          ((fresh (var) ;; Look up a variable
                  (== exp (jvar var))
                  (lookupo var env value)
                  (== `(,store . ,next-address) `(,store~ . ,next-address~))))
          ((fresh (body params) ;; Function creation
                  (== exp (jfun params body))
-                 (== value (jclo params body env))
+                 (== value (jobj `() (list (cons (jstr "call") (jclo params body env)))))
                  (== `(,store . ,next-address) `(,store~ . ,next-address~))))
-         ((fresh (closure params args args-eval body cenv cenv^ zipped store^ next-address^) ;; Function application
-                 (== exp (japp closure args))
-                 (evalo/propagation evalo-env-list `(,closure . ,args)  env (value-list `(,(jclo params body cenv) . ,args-eval)) value
+         ((fresh (fobj pubfields privfields closure params args args-eval body cenv cenv^ zipped store^ next-address^ type) ;; Function application
+                 (== exp (japp fobj args))
+                 (evalo/propagation evalo-env-list `(,fobj . ,args)  env (value-list `(,(jobj pubfields privfields) . ,args-eval)) value
                                     store store^ store~
                                     next-address next-address^ next-address~
+                                    (lookupo (jstr "call") privfields (jclo params body cenv))
                                     (zipo zipped params args-eval)
                                     (appendo cenv zipped cenv^)
-                                    (evalo-env body cenv^ value store^ store~ next-address^ next-address~))))
-         ((fresh (obj-exp bindings key key^) ;; Get
+                                    (evalo-env body cenv^ value store^ store~ next-address^ next-address~)
+                                    )))
+         ((fresh (obj-exp bindings key key^ type priv) ;; Get
                  (== exp (jget obj-exp key))
-                 (evalo/propagation evalo-env-list `(,key ,obj-exp) env (value-list `(,key^ ,(jobj bindings))) value
+                 (evalo/propagation evalo-env-list `(,key ,obj-exp) env (value-list `(,key^ ,(jobj bindings priv))) value
                                     store store~ store~
                                     next-address next-address~ next-address~
+                                    (typeofo key^ type)
+                                    (== type (jstr "string"))
                                     (conde ((absento-keys key^ bindings) ;; not found
                                             (== value (jundef)))
                                            ((membero `(,key^ . ,value) bindings)))))) ;; found
-         ((fresh (obj-exp bindings key key^ val val^) ;; Create field
+         ((fresh (obj-exp bindings key key^ val val^ type priv) ;; Create field
                  (== exp (jset obj-exp key val))
-                 (evalo/propagation evalo-env-list `(,obj-exp ,key ,val) env (value-list `(,(jobj bindings) ,key^ ,val^)) value
+                 (evalo/propagation evalo-env-list `(,obj-exp ,key ,val) env (value-list `(,(jobj bindings priv) ,key^ ,val^)) value
                                     store store~ store~
                                     next-address next-address~ next-address~
-                                    (== value (jobj `((,key^ . ,val^) . ,bindings)))
+                                    (typeofo key^ type)
+                                    (== type (jstr "string"))
+                                    (== value (jobj `((,key^ . ,val^) . ,bindings) priv))
                                     (absento-keys key^ bindings))))
-         ((fresh (obj-exp bindings bindings-updated key key^ val val^ v) ;; Update field
+         ((fresh (obj-exp bindings bindings-updated key key^ val val^ v type priv) ;; Update field
                  (== exp (jset obj-exp key val))
-                 (evalo/propagation evalo-env-list `(,obj-exp ,key ,val) env (value-list `(,(jobj bindings) ,key^ ,val^)) value
+                 (evalo/propagation evalo-env-list `(,obj-exp ,key ,val) env (value-list `(,(jobj bindings priv) ,key^ ,val^)) value
                                     store store~ store~
                                     next-address next-address~ next-address~
+                                    (typeofo key^ type)
+                                    (== type (jstr "string"))
                                     (membero `(,key^ . ,v) bindings)
                                     (updato bindings key^ val^ bindings-updated)
-                                    (== value (jobj bindings-updated)))))
-         ((fresh (obj-exp bindings-prev bindings key key^ store^ next-address^) ;; Delete field
+                                    (== value (jobj bindings-updated priv)))))
+         ((fresh (obj-exp bindings-prev private bindings key key^ store^ next-address^ type) ;; Delete field
                  (== exp (jdel obj-exp key))
-                 (evalo/propagation evalo-env-list `(,obj-exp ,key) env (value-list `(,(jobj bindings-prev) ,key^)) value
+                 (evalo/propagation evalo-env-list `(,obj-exp ,key) env (value-list `(,(jobj bindings-prev private) ,key^)) value
                                     store store~ store~
                                     next-address next-address~ next-address~
+                                    (typeofo key^ type)
+                                    (== type (jstr "string"))
                                     (evalo-env key env key^ store^ store~ next-address^ next-address~)
                                     (deleto bindings-prev key^ bindings)
-                                    (== value (jobj bindings)))))
+                                    (== value (jobj bindings private)))))
          ((fresh (ref ref^ next-address^ store^) ;; Allocate memory
                  (== exp (jall ref))
                  (evalo/propagation evalo-env ref env ref^ value
@@ -103,7 +113,7 @@
          ((fresh (try-exp finally-exp try-value store^ next-address^ dummy) ;; Finally
                  (== exp (jfin try-exp finally-exp))
                  (evalo-env try-exp env try-value store store^ next-address next-address^)
-                 (evalo/propagation evalo-env-list `(,finally-exp ,try-value) env `(,dummy ,value) value
+                 (evalo/propagation evalo-env finally-exp env (value-list value) value
                                     store^ store~ store~ next-address next-address~ next-address~)))
          ((fresh (label label^ try-exp catch-var catch-exp try-value store^ next-address^ env^ break-value first rest) ;; Catch
                  (== exp (jcatch label try-exp catch-var catch-exp))
@@ -118,13 +128,13 @@
                          (=/= first `break)
                          (== `(,value ,store~ ,next-address~) `(,try-value ,store^ ,next-address^))))))
          ((jdeltao env exp value store store~ next-address next-address~))
-         ((fresh (label val val^)
+         ((fresh (label val val^) ;; Throw
                  (== exp (jthrow label val))
                  (evalo-env val env val^ store store~ next-address next-address~)
                  (== value (jbrk label val^))))
          ))
 
-(define (jdeltao env exp value store store~ next-address next-address~) ; TODO: Evaluate everything everywhere
+(define (jdeltao env exp value store store~ next-address next-address~)
   (fresh (func vals op1 op2 v1 v2 temp vals^ value^ rem)
          (== exp (jdelta func vals))
          (evalo/propagation evalo-env-list vals env (value-list vals^) value
@@ -165,7 +175,7 @@
 (define (typeofo exp value)
   (fresh (temp)(conde ((== exp (jundef))
                        (== value (jstr "undefined")))
-                      ((== exp (jnul)) ;; According to node, it is actually "object"
+                      ((== exp (jnul))
                        (== value (jstr "object")))
                       ((== exp `(string . ,temp)) ;; For all of these, the prefixes are hardcoded
                        (== value (jstr "string")))
@@ -173,8 +183,12 @@
                        (== value (jstr "number")))
                       ((== exp  `(boolean . ,temp)) 
                        (== value (jstr "boolean")))
-                      ((== exp  `(object . ,temp)) 
-                       (== value (jstr "object"))))))
+                      ((== exp  `(object ,temp `())) 
+                       (== value (jstr "object")))
+                      ((fresh (priv temp2)
+                              (== exp  `(object ,temp ,priv))
+                              (lookupo (jstr "call") priv temp2)
+                              (== value (jstr "function")))))))
 
 (define (string-lesso s1 s2 value)
   (fresh (x x^ y y^ rest)
@@ -238,8 +252,7 @@
                          (== orest rrest))
                         ((=/= k key)
                          (== v v2)
-                         (updato orest key value rrest)))
-                 ))))
+                         (updato orest key value rrest)))))))
 
 (define (deleto obj key result)
   (conde ((== obj `()) (== result `()))
@@ -307,16 +320,16 @@
          (conde ((== first item)) ((membero item rest)))))
 
 (define (jnumbero exp)
-  (fresh (n val) (== exp (cons (car (jnum 0)) val))))
+  (fresh (val) (== exp `(number ,val))))
 
 (define (jstro exp)
-  (fresh (n val) (== exp (cons (car (jstr "")) val))))
+  (fresh (val) (== exp `(string ,val))))
 
 (define (objecto exp)
-  (fresh (binds) (== exp (jobj binds))))
+  (fresh (binds priv) (== exp `(object ,binds ,priv))))
 
 (define (closuro exp)
-  (fresh (params body env) (== exp (jclo params body env))))
+  (fresh (params body env) (== exp `(closure ,params ,body ,env))))
 
 (define (referenso exp)
   (fresh (addr) (== exp (jref addr))))
