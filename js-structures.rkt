@@ -35,8 +35,8 @@
 (define (jnum n)
   `(number ,(build-num n)))
 
-(define (jobj bindings private)
-  `(object ,bindings ,private))
+(define (jobj bindings)
+  `(object ,bindings))
 
 (define (jall value)
   `(allocate ,value))

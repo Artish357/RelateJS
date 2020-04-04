@@ -2,17 +2,6 @@
 (require "js-structures.rkt" "faster-miniKanren/mk.rkt" "evalo.rkt")
 (provide pull-varo pull-varo-list pull-pairso pull-names-listo humanize dehumanize parseo parseo-h parseo-nh)
 
-;; Stuff that's unclear:
-;; Implementation of finally (+ labels?)
-;; Object declaration
-;; Aren't functions supposed to be modeled as objects
-
-;; Missing syntax:
-;; for
-;; primitive
-
-;; need to rewrite var parser
-
 (define (parseo exp jexp)
   (conde ((parse-expo exp jexp)) ;; Expressions
          ((fresh (exps exps^) ;; Begin
@@ -63,13 +52,13 @@
 (define (parse-expo exp jexp)
   (conde ;; primitive values
     ((== exp jexp)(fresh (x) (conde ((== exp `(number ,x)))
-                                    ((== exp `(string ,x)))
-                                    ((== exp `(object ,x))))))
+                                    ((== exp `(string ,x))))))
     ((== exp #t) (== jexp (jbool #t)))
     ((== exp #f) (== jexp (jbool #f)))
     ((symbolo exp) (== jexp (jderef (jvar exp))))
     ((== exp (jundef)) (== jexp (jundef)))
     ((== exp (jnul)) (== jexp (jnul)))
+    ((objecto exp jexp))
     ((fresh (op vals vals^) ;; Basic operations
             (== exp `(op ,op . ,vals))
             (parse-exp-listo vals vals^)
@@ -133,12 +122,26 @@
                  (== exp `(@ ,obj ,val))
                  (== jexp (jbeg (jset obj val (jall (jundef))) (jget obj val))))))) ;; inefficient! TODO: fix
 
+
+(define (objecto exp jexp)
+  (fresh (pairs binds)
+         (== exp `(object . ,pairs))
+         (object-helpero pairs binds)
+         (== jexp (jobj (list (cons (jstr "private") (jobj `())) (cons (jstr "public") (jobj binds)))))))
+
+(define (object-helpero exp-binds binds)
+  (conde ((== exp-binds `()) (== binds `()))
+         ((fresh (key value rest pair-rest)
+                 (== exp-binds `((,key ,value) . ,rest))
+                 (== binds `((,key . ,value)  . ,pair-rest))
+                 (object-helpero rest pair-rest)))))
+
 (define (varo exp jexp)
-  (fresh (vars pairs)
+  (fresh (vars pairs jexp^)
          (== exp `(var . ,vars))
          (pull-pairso vars pairs)
-         (conde ((== pairs `()) (== jexp (jundef))) ;; TODO: temporary?
-                ((=/= pairs `()) (pair-assigno pairs jexp)))))
+         (conde ((== pairs `()) (== jexp (jundef)))
+                ((=/= pairs `()) (pair-assigno pairs jexp^) (== jexp (jbeg jexp^ (jundef)))))))
 
 (define (functiono exp jexp)
   (fresh (params body body^ body^^ body^^^ vars vars^)
@@ -203,7 +206,7 @@
                  (pull-varo-list body temp^)
                  (appendo temp temp^ vars)))
          ((fresh (t x)
-                 (== exp `(switch ,t . ,x)) ;; TODO: doesn't pull
+                 (== exp `(switch ,t . ,x))
                  (pull-var-switcho x vars)))
          ((fresh (exps)
                  (== exp `(begin . ,exps))
@@ -225,7 +228,7 @@
   (conde ((== vars `())
           (conde ((fresh (x) (== exp `(number ,x))))
                  ((fresh (x) (== exp `(string ,x))))
-                 ((fresh (x) (== exp `(object ,x))))
+                 ((fresh (x) (== exp `(object . ,x))))
                  ((== exp #t))
                  ((== exp #f))
                  ((== exp (jundef)))
@@ -312,7 +315,8 @@
 
 (define/match (mknum->num x)
   [((list)) 0]
-  [((cons d rest)) (+ d (* 2 (mknum->num rest)))])
+  [((cons d rest)) (+ d (* 2 (mknum->num rest)))]
+  [(_) (begin x)])
 
 (define/match (dehumanize exp)
   [((? string?)) (jstr exp)]
