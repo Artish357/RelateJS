@@ -23,61 +23,51 @@
                  (== `(,store . ,next-address) `(,store~ . ,next-address~))))
          ((fresh (body params) ;; Function creation
                  (== exp (jfun params body))
-                 (== value (jobj (list (cons (jstr "public") (jobj `()))(cons (jstr "private") (jobj (list (cons (jstr "call") (jclo params body env))))))))
+                 (== value (jclo params body env))
                  (== `(,store . ,next-address) `(,store~ . ,next-address~))))
-         ((fresh (fobj fields privfields params args args-eval body cenv cenv^ zipped store^ next-address^) ;; Function application
-                 (== exp (japp fobj args))
-                 (evalo/propagation evalo-env-list `(,fobj . ,args)  env (value-list `(,(jobj fields) . ,args-eval)) value
+         ((fresh (func params args args-eval body cenv cenv^ zipped store^ next-address^) ;; Function application
+                 (== exp (japp func args))
+                 (evalo/propagation evalo-env-list `(,func . ,args) env (value-list `(,(jclo params body cenv) . ,args-eval)) value
                                     store store^ store~
                                     next-address next-address^ next-address~
-                                    (lookupo (jstr "private") fields (jobj privfields))
-                                    (lookupo (jstr "call") privfields (jclo params body cenv))
                                     (zipo zipped params args-eval)
                                     (appendo cenv zipped cenv^)
-                                    (evalo-env body cenv^ value store^ store~ next-address^ next-address~)
-                                    )))
-         ((fresh (obj-exp bindings public key key^) ;; Get
+                                    (evalo-env body cenv^ value store^ store~ next-address^ next-address~))))
+         ((fresh (obj-exp bindings key key^) ;; Get
                  (== exp (jget obj-exp key))
                  (evalo/propagation evalo-env-list `(,key ,obj-exp) env (value-list `(,key^ ,(jobj bindings))) value
                                     store store~ store~
                                     next-address next-address~ next-address~
                                     (typeofo key^ (jstr "string"))
-                                    (lookupo (jstr "public") bindings (jobj public))
-                                    (conde ((absento-keys key^ public) ;; not found
+                                    (conde ((absento-keys key^ bindings) ;; not found
                                             (== value (jundef)))
-                                           ((membero `(,key^ . ,value) public)))))) ;; found
-         ((fresh (obj-exp bindings private public  key key^ val val^) ;; Create field
+                                           ((membero `(,key^ . ,value) bindings)))))) ;; found
+         ((fresh (obj-exp bindings key key^ val val^) ;; Create field
                  (== exp (jset obj-exp key val))
                  (evalo/propagation evalo-env-list `(,obj-exp ,key ,val) env (value-list `(,(jobj bindings) ,key^ ,val^)) value
                                     store store~ store~
                                     next-address next-address~ next-address~
                                     (typeofo key^ (jstr "string"))
-                                    (lookupo (jstr "public") bindings (jobj public))
-                                    (lookupo (jstr "private") bindings (jobj private))
-                                    (== value (jobj (list (cons (jstr "private") (jobj private)) (cons (jstr "public") (jobj (cons (cons key^ val^) public))))))
-                                    (absento-keys key^ public))))
-         ((fresh (obj-exp bindings public private public^ key key^ val val^ v) ;; Update field
+                                    (== value (jobj (cons (cons key^ val^) bindings)))
+                                    (absento-keys key^ bindings))))
+         ((fresh (obj-exp bindings bindings^ key key^ val val^ v) ;; Update field
                  (== exp (jset obj-exp key val))
                  (evalo/propagation evalo-env-list `(,obj-exp ,key ,val) env (value-list `(,(jobj bindings) ,key^ ,val^)) value
                                     store store~ store~
                                     next-address next-address~ next-address~
                                     (typeofo key^ (jstr "string"))
-                                    (lookupo (jstr "public") bindings (jobj public))
-                                    (lookupo (jstr "private") bindings (jobj private))
-                                    (membero `(,key^ . ,v) public)
-                                    (updato bindings key^ val^ public^)
-                                    (== value (jobj (list (cons (jstr "private") (jobj private)) (cons (jstr "public") (jobj public^))))))))
-         ((fresh (obj-exp public public^ private bindings key key^ store^ next-address^) ;; Delete field
+                                    (membero `(,key^ . ,v) bindings)
+                                    (updato bindings key^ val^ bindings^)
+                                    (== value (jobj bindings^)))))
+         ((fresh (obj-exp bindings bindings^ key key^ store^ next-address^) ;; Delete field
                  (== exp (jdel obj-exp key))
                  (evalo/propagation evalo-env-list `(,obj-exp ,key) env (value-list `(,(jobj bindings) ,key^)) value
                                     store store~ store~
                                     next-address next-address~ next-address~
                                     (typeofo key^ (jstr "string"))
-                                    (lookupo (jstr "public") bindings (jobj public))
-                                    (lookupo (jstr "private") bindings (jobj private))
                                     (evalo-env key env key^ store^ store~ next-address^ next-address~)
-                                    (deleto public key^ public^)
-                                    (== value (list (cons (jstr "private") (jobj private)) (cons (jstr "public") (jobj public^)))))))
+                                    (deleto bindings key^ bindings^)
+                                    (== value (jobj bindings^)))))
          ((fresh (ref ref^ next-address^ store^) ;; Allocate memory
                  (== exp (jall ref))
                  (evalo/propagation evalo-env ref env ref^ value
@@ -187,14 +177,17 @@
                        (== value (jstr "number")))
                       ((== exp  `(boolean . ,temp)) 
                        (== value (jstr "boolean")))
-                      ((== exp  `(object ,temp))
-                       (lookupo (jstr "private") temp (jobj `())) ; Will break when more private fields are introduced
-                       (== value (jstr "object")))
+                      ((fresh (private)
+                              (== exp `(object ,temp))
+                              (lookupo (jstr "private") temp (jobj private))
+                              (absento-keys (jstr "call") private)
+                              (== value (jstr "object"))))
                       ((fresh (priv fields temp2)
                               (== exp  `(object ,fields))
                               (lookupo (jstr "private") fields (jobj priv))
                               (lookupo (jstr "call") priv temp2)
                               (== value (jstr "function")))))))
+
 
 (define (string-lesso s1 s2 value)
   (fresh (x x^ y y^ rest)
