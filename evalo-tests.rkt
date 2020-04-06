@@ -112,7 +112,7 @@
       )
     )
   (test= "typeof"
-         (map (lambda (x) (run* (val) (fresh (x) (evalo (jdelta `typeof `(,x)) val))))
+         (map (lambda (x) (run* (val) (evalo (jdelta `typeof `(,x)) val)))
               (list
                (jundef)
                (jnul)

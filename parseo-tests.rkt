@@ -17,6 +17,17 @@
   (test= "Pull vars, nested functions"
          (run* (pairs) (pull-names-listo `(begin (var (a 1) b (c (function (x) (var should-not-pop-up)))) (if () (var (q 3)) (var y))) pairs))
          '((a b c q y)))
+  (test= "Object creation"
+         (map humanize (run* (c) (fresh (code) (parseo-h `(@ (object ("1" 1) ("2" 2)) "1") code) (evalo code c))))
+         `(1))
+  (test= "Object field setting"
+         (map humanize (run* (r) (fresh (code) (parseo-h `(:= (@ (object) "3") 3) code) (evalo code r))))
+         (map humanize `((object
+            ((,(jstr "private") . (object ()))
+             (,(jstr "public")  . (object ((,(jstr "1") . ,(jnum 1)) (,(jstr "2") . ,(jnum 2))))))))))
+  (test= "Object field updating"
+         (map humanize (run* (r) (fresh (code) (parseo-h `(begin (var (x (object ("3" 3)))) (:= (@ x "3") 3)) code) (evalo code r))))
+         `(3))
   (test= "Human interface functions"
          (humanize (dehumanize (list 1 "hello" 1337)))
          (list 1 "hello" 1337))

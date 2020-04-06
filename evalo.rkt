@@ -6,9 +6,9 @@
   (fresh (store^ next-address^) (evalo-env exp `() val `() store^ `() next-address^)))
 
 (define (evalo-env exp env value store store~ next-address next-address~)
-  (conde ((conde ((jnumbero exp)) ((objecto exp)) ((closuro exp)) ((referenso exp)) ((breako exp)) ((boolo exp)) ((jstro exp))
+  (conde ((== exp value)
+          (conde ((jnumbero exp)) ((objecto exp)) ((closuro exp)) ((referenso exp)) ((breako exp)) ((boolo exp)) ((jstro exp))
                  ((== exp (jundef))) ((== exp (jnul)))) ;; Values
-          (== exp value)
           (== `(,store . ,next-address) `(,store~ . ,next-address~)))
          ((fresh (k v v^ exp2 env2 store^ next-address^) ;; Let
                  (== exp (jlet k v exp2))
@@ -19,8 +19,9 @@
                                     (evalo-env exp2 env2 value store^ store~ next-address^ next-address~))))
          ((fresh (var) ;; Look up a variable
                  (== exp (jvar var))
+                 (== `(,store . ,next-address) `(,store~ . ,next-address~))
                  (lookupo var env value)
-                 (== `(,store . ,next-address) `(,store~ . ,next-address~))))
+                 ))
          ((fresh (body params) ;; Function creation
                  (== exp (jfun params body))
                  (== value (jclo params body env))
@@ -39,56 +40,61 @@
                                     store store~ store~
                                     next-address next-address~ next-address~
                                     (typeofo key^ (jstr "string"))
-                                    (conde ((absento-keys key^ bindings) ;; not found
-                                            (== value (jundef)))
+                                    (conde ((== value (jundef))
+                                            (absento-keys key^ bindings) ;; not found
+                                            )
                                            ((membero `(,key^ . ,value) bindings)))))) ;; found
          ((fresh (obj-exp bindings key key^ val val^) ;; Create field
                  (== exp (jset obj-exp key val))
                  (evalo/propagation evalo-env-list `(,obj-exp ,key ,val) env (value-list `(,(jobj bindings) ,key^ ,val^)) value
                                     store store~ store~
                                     next-address next-address~ next-address~
-                                    (typeofo key^ (jstr "string"))
                                     (== value (jobj (cons (cons key^ val^) bindings)))
+                                    (typeofo key^ (jstr "string"))
                                     (absento-keys key^ bindings))))
          ((fresh (obj-exp bindings bindings^ key key^ val val^ v) ;; Update field
                  (== exp (jset obj-exp key val))
                  (evalo/propagation evalo-env-list `(,obj-exp ,key ,val) env (value-list `(,(jobj bindings) ,key^ ,val^)) value
                                     store store~ store~
                                     next-address next-address~ next-address~
+                                    (== value (jobj bindings^))
                                     (typeofo key^ (jstr "string"))
                                     (membero `(,key^ . ,v) bindings)
                                     (updato bindings key^ val^ bindings^)
-                                    (== value (jobj bindings^)))))
+                                    )))
          ((fresh (obj-exp bindings bindings^ key key^ store^ next-address^) ;; Delete field
                  (== exp (jdel obj-exp key))
                  (evalo/propagation evalo-env-list `(,obj-exp ,key) env (value-list `(,(jobj bindings) ,key^)) value
                                     store store~ store~
                                     next-address next-address~ next-address~
+                                    (== value (jobj bindings^))
                                     (typeofo key^ (jstr "string"))
-                                    (evalo-env key env key^ store^ store~ next-address^ next-address~)
                                     (deleto bindings key^ bindings^)
-                                    (== value (jobj bindings^)))))
+                                    (evalo-env key env key^ store^ store~ next-address^ next-address~)
+                                    )))
          ((fresh (ref ref^ next-address^ store^) ;; Allocate memory
                  (== exp (jall ref))
                  (evalo/propagation evalo-env ref env ref^ value
                                     store store^ store~
                                     next-address next-address^ next-address~
+                                    (== value (jref next-address))
                                     (appendo store^ `(,ref^) store~)
                                     (incremento next-address^ next-address~)
-                                    (== value (jref next-address)))))
+                                    )))
          ((fresh (addr-exp addr) ;; Fetch from memory
                  (== exp (jderef addr-exp))
                  (evalo/propagation evalo-env addr-exp env (jref addr) value
                                     store store~ store~
                                     next-address next-address~ next-address~
-                                    (indexo store addr value))))
+                                    (indexo store~ addr value))))
          ((fresh (var val addr val^ store^) ;; Assign to memory address
                  (== exp (jassign var val))
                  (evalo/propagation evalo-env-list `(,var ,val) env (value-list `(,(jref addr) ,val^)) value
                                     store store^ store~
                                     next-address next-address~ next-address~
+                                    (== value val^)
                                     (set-indexo store^ addr val^ store~)
-                                    (== value val^))))
+                                    )))
          ((fresh (first second dummy) ;; Begin-discard
                  (== exp (jbeg first second))
                  (evalo/propagation evalo-env-list `(,first ,second) env (value-list `(,dummy ,value)) value
@@ -116,16 +122,19 @@
                          (appendo env `((,catch-var . ,break-value)) env^)
                          (evalo-env catch-exp env^ value store^ store~ next-address^ next-address~))
                         ((== try-value (jbrk label^ break-value)) ;; Break does not match label
+                         (== `(,value ,store~ ,next-address~) `(,try-value ,store^ ,next-address^))
                          (=/= label^ label)
-                         (== `(,value ,store~ ,next-address~) `(,try-value ,store^ ,next-address^)))
+                         )
                         ((== try-value `(,first . ,rest)) ;; No break was caught
+                         (== `(,value ,store~ ,next-address~) `(,try-value ,store^ ,next-address^))
                          (=/= first `break)
-                         (== `(,value ,store~ ,next-address~) `(,try-value ,store^ ,next-address^))))))
+                         ))))
          ((jdeltao env exp value store store~ next-address next-address~))
          ((fresh (label val val^) ;; Throw
                  (== exp (jthrow label val))
+                 (== value (jbrk label val^))
                  (evalo-env val env val^ store store~ next-address next-address~)
-                 (== value (jbrk label val^))))
+                 ))
          ))
 
 (define (jdeltao env exp value store store~ next-address next-address~)
@@ -138,7 +147,7 @@
                                     (typeofo op1 value))
                                    ((== `(,func ,vals^) `(=== (,v1 ,v2)))
                                     (conde ((== v1 v2) (== value (jbool #t)))
-                                           ((=/= v1 v2) (== value (jbool #f)))))
+                                           ((== value (jbool #f)) (=/= v1 v2))))
                                    ((== `(,v1 ,v2) vals^) ;; Number operations
                                     (typeofo v1 (jstr "number"))
                                     (typeofo v2 (jstr "number"))
@@ -179,14 +188,16 @@
                        (== value (jstr "boolean")))
                       ((fresh (private)
                               (== exp `(object ,temp))
+                              (== value (jstr "object"))
                               (lookupo (jstr "private") temp (jobj private))
                               (absento-keys (jstr "call") private)
-                              (== value (jstr "object"))))
+                              ))
                       ((fresh (priv fields temp2)
                               (== exp  `(object ,fields))
+                              (== value (jstr "function"))
                               (lookupo (jstr "private") fields (jobj priv))
                               (lookupo (jstr "call") priv temp2)
-                              (== value (jstr "function")))))))
+                              )))))
 
 
 (define (string-lesso s1 s2 value)
@@ -194,8 +205,8 @@
          (conde ((== s1 `()) (== s2 `(,x . ,rest)) (== value (jbool #t)))
                 ((== s2 `()) (== value (jbool #f)))
                 ((== s1 `(,x . ,x^)) (== s2 `(,x . ,y^)) (string-lesso x^ y^ value))
-                ((== s1 `(,x . ,x^)) (== s2 `(,y . ,y^)) (=/= x y) (<o x y) (== value (jbool #t)))
-                ((== s1 `(,x . ,x^)) (== s2 `(,y . ,y^)) (=/= x y) (<=o y x) (== value (jbool #f))))))
+                ((== s1 `(,x . ,x^)) (== s2 `(,y . ,y^)) (== value (jbool #t)) (=/= x y) (<o x y))
+                ((== s1 `(,x . ,x^)) (== s2 `(,y . ,y^)) (== value (jbool #f)) (=/= x y) (<=o y x)))))
 
 (define-syntax-rule (evalo/propagation evalo-func exp env val value
                                        store store^ store~
@@ -206,8 +217,9 @@
          (conde ((== (jbrk label bval) intermediate-val)
                  (== `(,value ,store~ ,next-address~) `(,intermediate-val ,store^ ,next-address^)))
                 ((== `(,tag . ,rest) intermediate-val)
+                 (== val intermediate-val)
                  (=/= tag `break)
-                 (== val intermediate-val) cont ...))))
+                  cont ...))))
 
 (define (evalo-env-list elist env vlist store store~ next-address next-address~)
   (conde ((== elist `()) (== vlist (value-list `())) (== store store~) (== next-address next-address~))
@@ -249,8 +261,8 @@
                  (conde ((== k key)
                          (== v2 value)
                          (== orest rrest))
-                        ((=/= k key)
-                         (== v v2)
+                        ((== v v2)
+                         (=/= k key)
                          (updato orest key value rrest)))))))
 
 (define (deleto obj key result)
@@ -259,8 +271,8 @@
                  (== obj `((,k . ,v) . ,orest))
                  (conde ((== k key)
                          (== orest result))
-                        ((=/= k key)
-                         (== result `((,k . ,v) . ,rrest))
+                        ((== result `((,k . ,v) . ,rrest))
+                         (=/= k key)
                          (deleto orest key rrest)))
                  ))))
 
@@ -308,9 +320,10 @@
          (== lst `(,l . ,lrest))
          (conde ((== index `())
                  (== result `(,value . ,lrest)))
-                ((=/= index `())
-                 (decremento index index^)
+                (
                  (== result `(,l . ,rrest))
+                 (=/= index `())
+                 (decremento index index^)
                  (set-indexo lrest index^ value rrest)))))
 
 (define (membero item lst)
