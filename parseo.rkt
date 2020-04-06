@@ -164,11 +164,11 @@
                  ))))
 
 (define (functiono exp jexp)
-  (fresh (params body body^ body^^ body^^^ body^^^^ vars vars^)
+  (fresh (params body body^ body^^ body^^^ body^^^^ vars vars^ payload)
          (== exp `(function ,params . ,body))
          (== jexp (jset
                    (jset (jobj `()) (jstr "private")
-                         (jset (jobj `()) (jstr "call") (jfun params (jlet `this (jall body^^^^) body^^^^)))) ;Temporary this binding, TODO: remove
+                         (jset (jobj `()) (jstr "call") (jfun params body^^^^)))
                    (jstr "public") (jobj `())))
          (parse-listo body body^)
          (begino body^ body^^)
@@ -269,7 +269,7 @@
                  ))
          ((fresh (func args)
                  (== exp `(call ,func . ,args))
-                 (pull-var-exp-listo args vars)))
+                 (pull-var-expo func vars)))
          ))
 
 (define (pull-varo-list exp-list vars)
