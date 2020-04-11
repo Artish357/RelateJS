@@ -51,4 +51,18 @@
                            (evalo code (jnum 1))
                            (evalo code2 (jnum 2))))
          `((,(jnum 0) ,(jnum 1))))
+  (test= "if/var case, restricted"
+         (run 2 (inside) (fresh (code)
+                                (parseo-nh `(call (function () (if #f (var ,inside) (return x))))
+                                      code)
+                                
+                                (evalo code (jundef))))
+         '(x (x #t)))
+  (test= "if/var case"
+         (run 2 (inside) (fresh (code)
+                                (parseo-nh `(call (function () (if #f ,inside (return x))))
+                                      code)
+                                
+                                (evalo code (jundef))))
+         '(x (x #t)))
   )

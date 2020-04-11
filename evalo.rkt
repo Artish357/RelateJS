@@ -7,9 +7,10 @@
 
 (define (evalo-env exp env value store store~ next-address next-address~)
   (conde ((== exp value)
+          (== `(,store . ,next-address) `(,store~ . ,next-address~))
           (conde ((jnumbero exp)) ((objecto exp)) ((closuro exp)) ((referenso exp)) ((breako exp)) ((boolo exp)) ((jstro exp))
                  ((== exp (jundef))) ((== exp (jnul)))) ;; Values
-          (== `(,store . ,next-address) `(,store~ . ,next-address~)))
+          )
          ((fresh (k v v^ exp2 env2 store^ next-address^) ;; Let
                  (== exp (jlet k v exp2))
                  (evalo/propagation evalo-env v env v^ value
@@ -152,12 +153,12 @@
                                     (typeofo v1 (jstr "number"))
                                     (typeofo v2 (jstr "number"))
                                     (== `(,(jrawnum op1) ,(jrawnum op2)) vals^)
-                                    (conde ((== func `+) (pluso op1 op2 value^) (== value (jrawnum value^)))
-                                           ((== func `-) (minuso op1 op2 value^) (== value (jrawnum value^)))
-                                           ((== func `*) (*o op1 op2 value^) (== value (jrawnum value^)))
-                                           ((== func `/) (/o op1 op2 value^ rem) (== value (jrawnum value^)))
-                                           ((== func `<) (conde ((<o op1 op2) (== value (jbool #t)))
-                                                                ((<=o op2 op1) (== value (jbool #f)))))))
+                                    (conde ((== func `+) (== value (jrawnum value^)) (pluso op1 op2 value^))
+                                           ((== func `-) (== value (jrawnum value^)) (minuso op1 op2 value^))
+                                           ((== func `*) (== value (jrawnum value^)) (*o op1 op2 value^))
+                                           ((== func `/) (== value (jrawnum value^)) (/o op1 op2 value^ rem))
+                                           ((== func `<) (conde ((== value (jbool #t)) (<o op1 op2))
+                                                                ((== value (jbool #f)) (<=o op2 op1))))))
                                    ((== `(,v1 ,v2) vals^) ;; String operations
                                     (typeofo v1 (jstr "string"))
                                     (typeofo v2 (jstr "string"))

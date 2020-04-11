@@ -84,8 +84,12 @@
            ))
    ((fresh (var val var^ val^) ;; Assignment
            (== exp `(:= ,var ,val))
-           (== jexp (jassign var^ val^))
-           (lh-parseo var var^)
+           (conde ((symbolo var) (== jexp (jassign (jvar exp) val^)))
+                  ((fresh (obj obj^ key key^ obj-parsed)
+                          (== var `(@ ,obj ,key))
+                          (== obj-parsed (jvar obj))
+                          (== jexp (jassign (jvar obj) (jset obj^ (jstr "public") (jset (jget obj^ (jstr "public")) key^ val^))))
+                          (parse-exp-listo key key^))))
            (parse-expo val val^)
            ))
    ))
@@ -174,7 +178,7 @@
          (begino body^ body^^)
          (pull-names-listo body vars) ;; TODO: No effect
          (assigno params body^^ body^^^)
-         (assigno vars body^^^ body^^^^)
+         (allocato vars body^^^ body^^^^)
          ))
 
 (define (leto vars cont jexp)
