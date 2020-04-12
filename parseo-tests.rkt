@@ -9,13 +9,13 @@
                         (time expr))
                  output))
   (test= "Pull vars, all undefined"
-         (run* (pairs) (pull-names-listo `(begin (var a b c) (if () (var q) (var y))) pairs))
+         (run* (pairs) (pull-varo `(begin (var a b c) (if () (var q) (var y))) pairs))
          '((a b c q y)))
   (test= "Pull vars, some assigned"
-         (run* (pairs) (pull-names-listo `(begin (var (a 1) b (c 2)) (if () (var (q 3)) (var y))) pairs))
+         (run* (pairs) (pull-varo `(begin (var (a 1) b (c 2)) (if () (var (q 3)) (var y))) pairs))
          '((a b c q y)))
   (test= "Pull vars, nested functions"
-         (run* (pairs) (pull-names-listo `(begin (var (a 1) b (c (function (x) (var should-not-pop-up)))) (if () (var (q 3)) (var y))) pairs))
+         (run* (pairs) (pull-varo `(begin (var (a 1) b (c (function (x) (var should-not-pop-up)))) (if () (var (q 3)) (var y))) pairs))
          '((a b c q y)))
   (test= "Object creation"
          (map humanize (run* (c) (fresh (code) (parseo-h `(@ (object ("1" 1) ("2" 2)) "1") code) (evalo code c))))

@@ -7,7 +7,8 @@
 
 (define (evalo-env exp env value store store~ next-address next-address~)
   (conde ((== exp value)
-          (== `(,store . ,next-address) `(,store~ . ,next-address~))
+          (== store store~)
+          (== next-address next-address~)
           (conde ((jnumbero exp)) ((objecto exp)) ((closuro exp)) ((referenso exp)) ((breako exp)) ((boolo exp)) ((jstro exp))
                  ((== exp (jundef))) ((== exp (jnul)))) ;; Values
           )
@@ -20,13 +21,15 @@
                                     (evalo-env exp2 env2 value store^ store~ next-address^ next-address~))))
          ((fresh (var) ;; Look up a variable
                  (== exp (jvar var))
-                 (== `(,store . ,next-address) `(,store~ . ,next-address~))
+                 (== store store~)
+                 (== next-address next-address~)
                  (lookupo var env value)
                  ))
          ((fresh (body params) ;; Function creation
                  (== exp (jfun params body))
                  (== value (jclo params body env))
-                 (== `(,store . ,next-address) `(,store~ . ,next-address~))))
+                 (== store store~)
+                 (== next-address next-address~)))
          ((fresh (func params args args-eval body cenv cenv^ zipped store^ next-address^) ;; Function application
                  (== exp (japp func args))
                  (evalo/propagation evalo-env-list `(,func . ,args) env (value-list `(,(jclo params body cenv) . ,args-eval)) value
@@ -41,10 +44,10 @@
                                     store store~ store~
                                     next-address next-address~ next-address~
                                     (typeofo key^ (jstr "string"))
-                                    (conde ((== value (jundef))
+                                    (conde ((membero `(,key^ . ,value) bindings)) ;; found
+                                           ((== value (jundef))
                                             (absento-keys key^ bindings) ;; not found
-                                            )
-                                           ((membero `(,key^ . ,value) bindings)))))) ;; found
+                                            )))))
          ((fresh (obj-exp bindings key key^ val val^) ;; Create field
                  (== exp (jset obj-exp key val))
                  (evalo/propagation evalo-env-list `(,obj-exp ,key ,val) env (value-list `(,(jobj bindings) ,key^ ,val^)) value
@@ -82,7 +85,7 @@
                                     (appendo store^ `(,ref^) store~)
                                     (incremento next-address^ next-address~)
                                     )))
-         ((fresh (addr-exp addr) ;; Fetch from memory
+         ((fresh (addr-exp addr) ;; Fetch from memыory
                  (== exp (jderef addr-exp))
                  (evalo/propagation evalo-env addr-exp env (jref addr) value
                                     store store~ store~
@@ -119,17 +122,17 @@
          ((fresh (label label^ try-exp catch-var catch-exp try-value store^ next-address^ env^ break-value first rest) ;; Catch
                  (== exp (jcatch label try-exp catch-var catch-exp))
                  (evalo-env try-exp env try-value store store^ next-address next-address^)
-                 (conde ((== try-value (jbrk label break-value)) ;; Exception was caught
-                         (appendo env `((,catch-var . ,break-value)) env^)
-                         (evalo-env catch-exp env^ value store^ store~ next-address^ next-address~))
-                        ((== try-value (jbrk label^ break-value)) ;; Break does not match label
+                 (conde ((== try-value (jbrk label^ break-value)) ;; Break does not match label
                          (== `(,value ,store~ ,next-address~) `(,try-value ,store^ ,next-address^))
                          (=/= label^ label)
                          )
                         ((== try-value `(,first . ,rest)) ;; No break was caught
                          (== `(,value ,store~ ,next-address~) `(,try-value ,store^ ,next-address^))
                          (=/= first `break)
-                         ))))
+                         )
+                        ((== try-value (jbrk label break-value)) ;; Exception was caught
+                         (appendo env `((,catch-var . ,break-value)) env^)
+                         (evalo-env catch-exp env^ value store^ store~ next-address^ next-address~)))))
          ((jdeltao env exp value store store~ next-address next-address~))
          ((fresh (label val val^) ;; Throw
                  (== exp (jthrow label val))
@@ -146,6 +149,16 @@
                             next-address next-address~ next-address~
                             (conde ((== `(,func (,op1)) `(typeof ,vals^)) ;; Typeof
                                     (typeofo op1 value))
+                                   ((== `(,v1) vals^) ;; Char -> nat
+                                    (typeofo v1 (jstr "string"))
+                                    (== `(,(jrawstr `(,op1))) vals^)
+                                    (== func `char->nat)
+                                    (== value (jrawnum op1)))
+                                   ((== `(,v1) vals^) ;; Nat -> char
+                                    (typeofo v1 (jstr "number"))
+                                    (== `(,(jrawnum op1)) vals^)
+                                    (== func `nat->char)
+                                    (== value (jrawstr `(,op1))))
                                    ((== `(,func ,vals^) `(=== (,v1 ,v2)))
                                     (conde ((== v1 v2) (== value (jbool #t)))
                                            ((== value (jbool #f)) (=/= v1 v2))))
@@ -163,18 +176,8 @@
                                     (typeofo v1 (jstr "string"))
                                     (typeofo v2 (jstr "string"))
                                     (== `(,(jrawstr op1) ,(jrawstr op2)) vals^)
-                                    (conde ((== func `string-+) (appendo op1 op2 value^) (== value (jrawstr value^)))
-                                           ((== func `string-<) (string-lesso op1 op2 value))))
-                                   ((== `(,v1) vals^) ;; Char -> nat
-                                    (typeofo v1 (jstr "string"))
-                                    (== `(,(jrawstr `(,op1))) vals^)
-                                    (== func `char->nat)
-                                    (== value (jrawnum op1)))
-                                   ((== `(,v1) vals^) ;; Nat -> char
-                                    (typeofo v1 (jstr "number"))
-                                    (== `(,(jrawnum op1)) vals^)
-                                    (== func `nat->char)
-                                    (== value (jrawstr `(,op1))))))))
+                                    (conde ((== func `string-+) (== value (jrawstr value^)) (appendo op1 op2 value^))
+                                           ((== func `string-<) (string-lesso op1 op2 value))))))))
 
 (define (typeofo exp value)
   (fresh (temp)(conde ((== exp (jundef))
@@ -329,7 +332,7 @@
 
 (define (membero item lst)
   (fresh (first rest)
-         (== `(,first . ,rest) lst)
+         (== lst `(,first . ,rest))
          (conde ((== first item)) ((membero item rest)))))
 
 (define (jnumbero exp)
