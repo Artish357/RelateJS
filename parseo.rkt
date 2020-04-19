@@ -66,6 +66,10 @@
    ((symbolo exp) (== jexp (jderef (jvar exp))))
    ((== exp (jundef)) (== jexp (jundef)))
    ((== exp (jnul)) (== jexp (jnul)))
+   ((fresh (exps exps^) ;; Begin
+           (== exp `(comma . ,exps))
+           (parse-exp-listo exps exps^)
+           (begino exps^ jexp)))
    ((objecto exp jexp))
    ((fresh (op vals vals^) ;; Basic operations
            (== exp `(op ,op . ,vals))
@@ -264,6 +268,7 @@
          (conde ((== exp `(number ,x)))
                 ((== exp `(string ,x)))
                 ((== exp `(object . ,x)))
+                ((== exp `(comma . ,x)))
                 ((== exp #t))
                 ((== exp #f))
                 ((== exp (jundef)))
