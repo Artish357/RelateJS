@@ -4,10 +4,11 @@
 
 (define (parseo exp jexp)
   (conde ((parse-expo exp jexp)) ;; Expressions
-         ((fresh (exps exps^) ;; Begin
+         ((fresh (exps exps^ jexp^) ;; Begin
                  (== exp `(begin . ,exps))
+                 (== jexp (jbeg jexp^ (jundef)))
                  (parse-listo exps exps^)
-                 (begino exps^ jexp)))
+                 (begino exps^ jexp^)))
          ((fresh (cond then else cond^ then^ else^) ;; if statements
                  (== exp `(if ,cond ,then ,else))
                  (== jexp (jif cond^ then^ else^))
@@ -178,8 +179,8 @@
          (parse-listo body body^)
          (pull-var-listo body vars)
          (begino body^ body^^)
-         (assigno params body^^ body^^^)
-         (allocato vars body^^^ body^^^^)
+         (allocato vars body^^ body^^^)
+         (assigno params body^^^ body^^^^)
          ))
 
 (define (leto vars cont jexp)

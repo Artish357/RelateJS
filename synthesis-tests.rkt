@@ -60,9 +60,10 @@
                              (evalo code2 (jnum 2))))
          `((,(jnum 0) ,(jnum 1))))
   (test= "if/var case"
-         (length (run 1 (inside) (fresh (code)
-                                (parseo-nh `(call (function () (if #f ,inside (return x))))
+         (run 30 (inside) (fresh (code)
+                                (parseo-h `(call (function (x) (if #f ,inside (return x))) 3)
                                            code)
-                                (evalo code (jundef)))))
+                                (evalo code (jundef))
+                                ))
          1)
   )
