@@ -18,7 +18,10 @@
          (run* (pairs) (pull-varo `(begin (var (a 1) b (c (function (x) (var should-not-pop-up)))) (if () (var (q 3)) (var y))) pairs))
          '((a b c q y)))
   (test= "Object creation"
-         (map humanize (run* (c) (fresh (code) (parseo-h `(@ (object ("1" 1) ("2" 2)) "1") code) (evalo code c))))
+         (map humanize (run* (r) (fresh (code c)
+                                        (parseo-h `(@ (object ("1" 1) ("2" 2)) "1") code)
+                                        (evalo code c)
+                                        (indexo c r))))
          `(1))
   (test= "Object field setting"
          (map humanize (run* (r) (fresh (code) (parseo-h  `(call (function () (var (x (object))) (:= (@ x "3") 3) (return (@ x "3")))) code) (evalo code r))))
