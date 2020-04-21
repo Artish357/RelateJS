@@ -119,8 +119,8 @@
                (jnum 42)
                (jstr "Hello")
                (jbool #f)
-               (jobj `((,(jstr "private") . ,(jobj `((,(jstr "not-call") . ,(jclo `() (jundef) `())))))))
-               (jobj `((,(jstr "private") . ,(jobj `((,(jstr "call") . ,(jclo `() (jundef) `())))))))
+               (jall (jobj `((,(jstr "private") . ,(jobj `((,(jstr "not-call") . ,(jclo `() (jundef) `()))))))))
+               (jall (jobj `((,(jstr "private") . ,(jobj `((,(jstr "call") . ,(jclo `() (jundef) `()))))))))
                ))
          (map (lambda (x) `(,(jstr x))) (list "undefined" "object" "number" "string" "boolean" "object" "function")))
   (test= "+"

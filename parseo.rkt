@@ -98,9 +98,10 @@
                           (== obj-parsed (jvar obj))
                           (symbolo temp-var)
                           (not-in-listo temp-var env)
-                          (== jexp (jassign
-                                    obj-parsed
-                                    (jset (jderef obj^) (jstr "public") (jset (jget (jderef obj^) (jstr "public")) key^ val^))))
+                          (== jexp (jlet
+                                    temp-var
+                                    (jset (jderef obj^) (jstr "public") (jset (jget (jderef obj^) (jstr "public")) key^ val^))
+                                    (jassign obj^ (jvar temp-var))))
                           (parse-exp-env-listo `(,key ,obj) `(,key^ ,obj^) env))))
            (parse-exp-envo val val^ env)
            ))

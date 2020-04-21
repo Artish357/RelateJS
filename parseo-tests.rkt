@@ -21,15 +21,15 @@
          (map humanize (run* (c) (fresh (code) (parseo-h `(@ (object ("1" 1) ("2" 2)) "1") code) (evalo code c))))
          `(1))
   (test= "Object field setting"
-         (map humanize (run* (r) (fresh (code) (parseo-h  `(begin (var (x (object))) (:= (@ x "3") 3)) code) (evalo code r))))
-         '((object (("public" object (("3" . 3))) ("private" object ())))))
+         (map humanize (run* (r) (fresh (code) (parseo-h  `(call (function () (var (x (object))) (:= (@ x "3") 3) (return (@ x "3")))) code) (evalo code r))))
+         '(3))
   (test= "Object field updating"
-         (map humanize (run* (r) (fresh (code) (parseo-h`(begin (var (x (object ("3" 2)))) (:= (@ x "3") 3)) code) (evalo code r))))
-         '((object (("public" object (("3" . 3))) ("private" object ())))))
+         (map humanize (run* (r) (fresh (code) (parseo-h  `(call (function () (var (x (object ("3" 2)))) (:= (@ x "3") 3) (return (@ x "3")))) code) (evalo code r))))
+         '(3))
   (test= "Human interface functions"
          (humanize (dehumanize (list 1 "hello" 1337)))
          (list 1 "hello" 1337))
-  (let ([f! (lambda (x) `(begin (var (f! (function (x) (if (op === x 1) (return 1) (return (op * x (call f! (op - x 1)))))))) (call f! ,x)))])
+  (let ([f! (lambda (x) `(call (function () (var (f! (function (x) (if (op === x 1) (return 1) (return (op * x (call f! (op - x 1)))))))) (return (call f! ,x)))))])
     (test= "Factorial of 4" (run* (r) (fresh (code) (parseo-h (f! 4) code) (evalo code r))) (list (dehumanize 24)))
     (test= "Factorial of 5" (run* (r) (fresh (code) (parseo-h (f! 5) code) (evalo code r))) (list (dehumanize 120)))
     )
