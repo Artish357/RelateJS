@@ -1,6 +1,6 @@
 #lang racket
 (require "faster-miniKanren/mk.rkt" "js-structures.rkt" "faster-miniKanren/numbers.rkt")
-(provide evalo evalo-env appendo)
+(provide evalo evalo-env appendo not-in-listo)
 
 (define (evalo exp val)
   (fresh (store^ next-address^) (evalo-env exp `() val `() store^ `() next-address^)))
@@ -43,7 +43,7 @@
                  (evalo/propagation evalo-env-list `(,key ,obj-exp) env (value-list `(,key^ ,(jobj bindings))) value
                                     store store~ store~
                                     next-address next-address~ next-address~
-                                    (typeofo key^ (jstr "string"))
+                                    (typeofo key^ (jstr "string") store)
                                     (conde ((membero `(,key^ . ,value) bindings)) ;; found
                                            ((== value (jundef))
                                             (absento-keys key^ bindings) ;; not found
@@ -54,7 +54,7 @@
                                     store store~ store~
                                     next-address next-address~ next-address~
                                     (== value (jobj (cons (cons key^ val^) bindings)))
-                                    (typeofo key^ (jstr "string"))
+                                    (typeofo key^ (jstr "string") store)
                                     (absento-keys key^ bindings))))
          ((fresh (obj-exp bindings bindings^ key key^ val val^ v) ;; Update field
                  (== exp (jset obj-exp key val))
@@ -62,7 +62,7 @@
                                     store store~ store~
                                     next-address next-address~ next-address~
                                     (== value (jobj bindings^))
-                                    (typeofo key^ (jstr "string"))
+                                    (typeofo key^ (jstr "string") store)
                                     (membero `(,key^ . ,v) bindings)
                                     (updato bindings key^ val^ bindings^)
                                     )))
@@ -72,7 +72,7 @@
                                     store store~ store~
                                     next-address next-address~ next-address~
                                     (== value (jobj bindings^))
-                                    (typeofo key^ (jstr "string"))
+                                    (typeofo key^ (jstr "string") store)
                                     (deleto bindings key^ bindings^)
                                     (evalo-env key env key^ store^ store~ next-address^ next-address~)
                                     )))
@@ -148,14 +148,14 @@
                             store store~ store~
                             next-address next-address~ next-address~
                             (conde ((== `(,func (,op1)) `(typeof ,vals^)) ;; Typeof
-                                    (typeofo op1 value))
+                                    (typeofo op1 value store))
                                    ((== `(,v1) vals^) ;; Char -> nat
-                                    (typeofo v1 (jstr "string"))
+                                    (typeofo v1 (jstr "string") store)
                                     (== `(,(jrawstr `(,op1))) vals^)
                                     (== func `char->nat)
                                     (== value (jrawnum op1)))
                                    ((== `(,v1) vals^) ;; Nat -> char
-                                    (typeofo v1 (jstr "number"))
+                                    (typeofo v1 (jstr "number") store)
                                     (== `(,(jrawnum op1)) vals^)
                                     (== func `nat->char)
                                     (== value (jrawstr `(,op1))))
@@ -163,8 +163,8 @@
                                     (conde ((== v1 v2) (== value (jbool #t)))
                                            ((== value (jbool #f)) (=/= v1 v2))))
                                    ((== `(,v1 ,v2) vals^) ;; Number operations
-                                    (typeofo v1 (jstr "number"))
-                                    (typeofo v2 (jstr "number"))
+                                    (typeofo v1 (jstr "number") store)
+                                    (typeofo v2 (jstr "number") store)
                                     (== `(,(jrawnum op1) ,(jrawnum op2)) vals^)
                                     (conde ((== func `+) (== value (jrawnum value^)) (pluso op1 op2 value^))
                                            ((== func `-) (== value (jrawnum value^)) (minuso op1 op2 value^))
@@ -173,13 +173,13 @@
                                            ((== func `<) (conde ((== value (jbool #t)) (<o op1 op2))
                                                                 ((== value (jbool #f)) (<=o op2 op1))))))
                                    ((== `(,v1 ,v2) vals^) ;; String operations
-                                    (typeofo v1 (jstr "string"))
-                                    (typeofo v2 (jstr "string"))
+                                    (typeofo v1 (jstr "string") store)
+                                    (typeofo v2 (jstr "string") store)
                                     (== `(,(jrawstr op1) ,(jrawstr op2)) vals^)
                                     (conde ((== func `string-+) (== value (jrawstr value^)) (appendo op1 op2 value^))
                                            ((== func `string-<) (string-lesso op1 op2 value))))))))
 
-(define (typeofo exp value)
+(define (typeofo exp value store)
   (fresh (temp)(conde ((== exp (jundef))
                        (== value (jstr "undefined")))
                       ((== exp (jnul))
@@ -190,17 +190,15 @@
                        (== value (jstr "number")))
                       ((== exp  `(boolean . ,temp)) 
                        (== value (jstr "boolean")))
-                      ((fresh (private)
-                              (== exp `(object ,temp))
-                              (== value (jstr "object"))
-                              (lookupo (jstr "private") temp (jobj private))
-                              (absento-keys (jstr "call") private)
-                              ))
-                      ((fresh (priv fields temp2)
-                              (== exp  `(object ,fields))
-                              (== value (jstr "function"))
+                      ((fresh (obj fields priv call)
+                              (== exp (jref temp))
+                              (== obj `(object ,fields))
+                              (conde ((== value (jstr "object"))
+                                      (absento-keys (jstr "call") priv))
+                                     ((== value (jstr "function"))
+                                      (lookupo (jstr "call") priv call)))
                               (lookupo (jstr "private") fields (jobj priv))
-                              (lookupo (jstr "call") priv temp2)
+                              (indexo store temp obj)
                               )))))
 
 
@@ -254,7 +252,7 @@
 (define (absento-keys val obj)
   (fresh (keys)
          (keyso obj keys)
-         (not-in-list val keys)))
+         (not-in-listo val keys)))
 
 (define (updato obj key value result)
   (conde ((== obj `())
@@ -295,13 +293,13 @@
                  (== l `((,k . ,v) . ,l^))
                  (zipo l^ krest vrest)))))
 
-(define (not-in-list el list)
+(define (not-in-listo el list)
   (conde
    ((== list `()))
    ((fresh (x rest)
            (== `(,x . ,rest) list)
            (=/= el x)
-           (not-in-list el rest)))))
+           (not-in-listo el rest)))))
 
 (define (lookupo x env t)
   (fresh (rest y v)
