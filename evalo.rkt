@@ -1,6 +1,6 @@
 #lang racket
 (require "faster-miniKanren/mk.rkt" "js-structures.rkt" "faster-miniKanren/numbers.rkt")
-(provide evalo evalo-env appendo not-in-listo keyso indexo)
+(provide evalo evalo-env appendo not-in-listo keyso indexo lookupo)
 
 (define (evalo exp val store)
   (fresh (next-address^) (evalo-env exp `() val `() store `() next-address^)))
@@ -85,7 +85,7 @@
                                     (appendo store^ `(,ref^) store~)
                                     (incremento next-address^ next-address~)
                                     )))
-         ((fresh (addr-exp addr) ;; Fetch from memыory
+         ((fresh (addr-exp addr) ;; Fetch from memory
                  (== exp (jderef addr-exp))
                  (evalo/propagation evalo-env addr-exp env (jref addr) value
                                     store store~ store~
@@ -195,8 +195,7 @@
                               (conde ((== value (jstr "object"))
                                       (indexo store temp `(object ,fields))
                                       (lookupo (jstr "private") fields (jobj priv))
-                                      (absento-keys (jstr "call") priv)
-                                      )
+                                      (absento-keys (jstr "call") priv))
                                      ((== value (jstr "function"))
                                       (indexo store temp `(object ,fields))
                                       (lookupo (jstr "private") fields (jobj priv))
