@@ -1,5 +1,5 @@
 #lang racket
-(require "js-structures.rkt" "faster-miniKanren/mk.rkt" "evalo.rkt")
+(require "js-structures.rkt" "faster-miniKanren/mk.rkt" "evalo.rkt" "helpers.rkt")
 (provide pull-varo pull-var-listo pull-pairso humanize dehumanize parseo parseo-h parseo-nh)
 
 (define (parse-envo exp jexp env)
@@ -11,7 +11,7 @@
                  (begino exps^ jexp^)))
          ((fresh (cond then else cond^ then^ else^) ;; if statements
                  (== exp `(if ,cond ,then ,else))
-                 (== jexp (jif cond^ then^ else^))
+                 (== jexp (jbeg (jif cond^ then^ else^) (jundef)))
                  (parse-env-listo `(,cond ,then ,else) `(,cond^ ,then^ ,else^) env) ;; TODO: somehow simplify to use parse-exp
                  ))
          ((varo exp jexp env)) ;; Var
@@ -20,39 +20,40 @@
          ;; different breaks
          ((fresh (val val^)  ;; return
                  (== exp `(return ,val))
-                 (== jexp (jthrow `return val^))
+                 (== jexp (jbeg (jthrow `return val^) (jundef)))
                  (parse-exp-envo val val^ env)
                  ))
          ((fresh (val val^)  ;; throw
                  (== exp `(throw ,val))
-                 (== jexp (jthrow `error val^))
+                 (== jexp (jbeg (jthrow `error val^)(jundef)))
                  (parse-exp-envo val val^ env)
                  ))
          ((fresh (val)  ;; break
                  (== exp  `(break))
-                 (== jexp (jthrow `break (jundef)))))
+                 (== jexp (jbeg (jthrow `break (jundef)) (jundef)))))
          ((fresh (try-exp catch-exp try-exp^ catch-exp^ label env^) ;; Try/catch
                  (== exp `(try ,try-exp catch ,label ,catch-exp))
-                 (== jexp (jcatch `error try-exp^ label
-                                  (jlet label (jall (jvar label)) catch-exp^)))
+                 (== jexp (jbeg (jcatch `error try-exp^ label
+                                  (jlet label (jall (jvar label)) catch-exp^)) (jundef)))
                  (== env^ `(,label . ,env))
                  (parse-env-listo `(,try-exp ,catch-exp) `(,try-exp^ ,catch-exp^) env^)
                  ))
          ((fresh (try-exp try-exp^  finally-exp finally-exp^) ;; Try/finally
                  (== exp `(try ,try-exp finally ,finally-exp))
-                 (== jexp (jfin try-exp^ finally-exp^))
+                 (== jexp (jbeg (jfin try-exp^ finally-exp^) (jundef)))
                  (parse-env-listo `(,try-exp ,finally-exp) `(,try-exp^ ,finally-exp^) env)
                  ))
          ((fresh (try-exp catch-exp try-exp^ catch-exp^ finally-exp finally-exp^ label env^) ;; Try/catch/finally
                  (== exp `(try ,try-exp catch ,label ,catch-exp finally ,finally-exp))
-                 (== jexp (jbeg (jcatch `error try-exp^ label catch-exp^) finally-exp^))
+                 (== jexp (jbeg (jbeg (jcatch `error try-exp^ label catch-exp^) finally-exp^) (jundef)))
                  (== env^ `(,label . ,env))
                  (parse-env-listo `(,try-exp ,catch-exp ,finally-exp) `(,try-exp^ ,catch-exp^ ,finally-exp^) env^)
                  )) ;; QUESTIONABLE!
          ((fresh (cond body cond^ body^ body^^) ;; while statements
                  (== exp `(while ,cond . ,body))
-                 (== jexp (jcatch `break (jwhile cond^ body^^) `e (jundef)))
-                 (parse-env-listo `(,cond . ,body) `(,cond^ . ,body^) env) ;; TODO: somehow simplify to use parse-exp
+                 (== jexp (jbeg (jcatch `break (jwhile cond^ body^^) `e (jundef)) (jundef)))
+                 (parse-exp-envo cond cond^ env)
+                 (parse-envo body body^ env) ;; TODO: somehow simplify to use parse-exp
                  (begino body^ body^^)
                  ))
          ))
@@ -69,16 +70,7 @@
    ((symbolo exp) (== jexp (jderef (jvar exp))))
    ((== exp (jundef)) (== jexp (jundef)))
    ((== exp (jnul)) (== jexp (jnul)))
-   ((fresh (exps exps^) ;; Begin
-           (== exp `(comma . ,exps))
-           (parse-exp-env-listo exps exps^ env)
-           (begino exps^ jexp)))
    ((objecto exp jexp env))
-   ((fresh (op vals vals^) ;; Basic operations
-           (== exp `(op ,op . ,vals))
-           (== jexp (jdelta op vals^))
-           (parse-exp-env-listo vals vals^ env)
-           ))
    ((functiono exp jexp env)) ;; Functions
    ((fresh (func args func^ args^) ;; Function call
            (== exp `(call ,func . ,args))
@@ -100,13 +92,22 @@
                           (not-in-listo temp-var env)
                           (== jexp (jbeg
                                     (jlet
-                                    temp-var
-                                    (jset (jderef obj^) (jstr "public") (jset (jget (jderef obj^) (jstr "public")) key^ val^))
-                                    (jassign obj^ (jvar temp-var)))
+                                     temp-var
+                                     (jset (jderef obj^) (jstr "public") (jset (jget (jderef obj^) (jstr "public")) key^ val^))
+                                     (jassign obj^ (jvar temp-var)))
                                     val^))
                           (parse-exp-env-listo `(,key ,obj) `(,key^ ,obj^) env))))
            (parse-exp-envo val val^ env)
            ))
+   ((fresh (op vals vals^) ;; Basic operations
+           (== exp `(op ,op . ,vals))
+           (== jexp (jdelta op vals^))
+           (parse-exp-env-listo vals vals^ env)
+           ))
+   ((fresh (exps exps^) ;; Comma
+           (== exp `(comma . ,exps))
+           (parse-exp-env-listo exps exps^ env)
+           (begino exps^ jexp)))
    ))
 
 (define (parse-foro exp jexp env)
@@ -142,13 +143,13 @@
     (fresh (vars exp^ allocations body)
            (pull-varo exp vars)
            (allocato vars body jexp)
-           (parse-envo exp body `()))))
+           (parse-envo exp body vars))))
 
 (define (parseo-nh exp jexp)
   (fresh (vars exp^ allocations body)
          (pull-varo exp vars)
          (allocato vars body jexp)
-         (parse-envo exp body `())))
+         (parse-envo exp body vars)))
 
 (define (lh-parseo exp jexp env)
   (conde ((symbolo exp) (== jexp (jvar exp)))
@@ -185,17 +186,33 @@
                  ))))
 
 (define (functiono exp jexp env)
-  (fresh (params body body^ body^^ body^^^ body^^^^ vars vars^ payload)
+  (fresh (params body body^ body^^ body^^^ body^^^^ vars vars^ payload env^ env^^)
          (== exp `(function ,params . ,body))
          (== jexp (jall (jset (jobj `((,(jstr "public") . ,(jobj `()))))
                               (jstr "private")
                               (jset (jobj `()) (jstr "call") (jfun params (jbeg body^^^^ (jundef)))))))
-         (parse-env-listo body body^ env)
          (pull-var-listo body vars)
+         (differenceo vars params vars^)
+         (appendo vars^ env env^)
+         (appendo params env^ env^^)
+         (parse-env-listo body body^ env^^)
          (begino body^ body^^)
-         (allocato vars body^^ body^^^)
+         (allocato vars^ body^^ body^^^)
          (assigno params body^^^ body^^^^)
          ))
+
+(define (differenceo list1 list2 result)
+  (conde ((== list1 `())
+          (== result list1))
+         ((fresh (el rest result^)
+                 (== list1 `(,el . ,rest))
+                 (conde ((== result `(,el . ,result^))
+                         (not-in-listo el list2)
+                         (differenceo rest list2 result^))
+                        ((membero el list2)
+                         (differenceo rest list2 result)))
+                 ))))
+
 (define (leto vars cont jexp)
   (fresh (k v rest let-rest)
          (== vars `((,k . ,v) . ,rest))
@@ -226,7 +243,7 @@
           (== jexp (jundef)))
          ((fresh (target body target^ body^ rest rest-exp)
                  (== pairs `((,target ,body) . ,rest))
-                 (== jexp (jif (jdelta `=== `(,val ,target^)) body^ rest-exp))
+                 (== jexp (jbeg (jif (jdelta `=== `(,val ,target^)) body^ rest-exp) (jundef)))
                  (parse-exp-envo target target^ env)
                  (parse-envo body body^ env)
                  (switch-helpero rest val rest-exp env)
@@ -234,9 +251,9 @@
 
 (define (pull-varo exp vars)
   (conde ((== vars `())
-          (fresh (x) (conde ((pull-var-expo exp `()))
-                            ((== exp `(return ,x)))
-                            ((== exp `(throw ,x))))))
+          (fresh (x) (conde ((== exp `(return ,x)))
+                            ((== exp `(throw ,x)))
+                            ((pull-var-expo exp `())))))
          ((fresh (x) (== exp `(var . ,x)) (pull-nameso x vars)))
          ((fresh (try-exp catch-exp label)
                  (== exp `(try ,try-exp catch ,label ,catch-exp))

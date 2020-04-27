@@ -1,9 +1,12 @@
 #lang racket
-(require "faster-miniKanren/mk.rkt" "js-structures.rkt" "faster-miniKanren/numbers.rkt")
-(provide evalo evalo-env appendo not-in-listo keyso indexo lookupo)
+(require "faster-miniKanren/mk.rkt" "js-structures.rkt" "faster-miniKanren/numbers.rkt" "helpers.rkt")
+(provide evalo evalo-env evalo-ns)
 
 (define (evalo exp val store)
   (fresh (next-address^) (evalo-env exp `() val `() store `() next-address^)))
+
+(define (evalo-ns exp val)
+  (fresh (next-address^ store) (evalo-env exp `() val `() store `() next-address^)))
 
 (define (evalo-env exp env value store store~ next-address next-address~)
   (conde ((== exp value)
@@ -236,102 +239,6 @@
                                                        (== value-rest (value-list value-rest^))
                                                        (== vlist (value-list `(,val . ,value-rest^)))))))))
 
-(define (incremento in out)
-  (== out `(,in)))
-
-(define (decremento in out)
-  (incremento out in))
-
-(define (keyso o k)
-  (conde ((== o `()) (== k `()))
-         ((fresh (x v o2 k2)
-                 (== o `((,x . ,v) . ,o2))
-                 (== k `(,x . ,k2))
-                 (keyso o2 k2)))))
-
-(define (absento-keys val obj)
-  (fresh (keys)
-         (keyso obj keys)
-         (not-in-listo val keys)))
-
-(define (updato obj key value result)
-  (conde ((== obj `())
-          (== result `()))
-         ((fresh (orest rrest k v v2)
-                 (== obj    `((,k . ,v ) . ,orest))
-                 (== result `((,k . ,v2) . ,rrest))
-                 (conde ((== k key)
-                         (== v2 value)
-                         (== orest rrest))
-                        ((== v v2)
-                         (=/= k key)
-                         (updato orest key value rrest)))))))
-
-(define (deleto obj key result)
-  (conde ((== obj `()) (== result `()))
-         ((fresh (orest rrest k v)
-                 (== obj `((,k . ,v) . ,orest))
-                 (conde ((== k key)
-                         (== orest result))
-                        ((== result `((,k . ,v) . ,rrest))
-                         (=/= k key)
-                         (deleto orest key rrest)))
-                 ))))
-
-(define (appendo s t r)
-  (conde ((== s `()) (== t r))
-         ((fresh (r^ sel srest)
-                 (== r `(,sel . ,r^))
-                 (== s `(,sel . ,srest))
-                 (appendo srest t r^)))))
-
-(define (zipo l keys values)
-  (conde ((== keys `()) (== values `()) (== l `()))
-         ((fresh (k v l^ krest vrest)
-                 (== keys `(,k . ,krest))
-                 (== values `(,v . ,vrest))
-                 (== l `((,k . ,v) . ,l^))
-                 (zipo l^ krest vrest)))))
-
-(define (not-in-listo el list)
-  (conde
-   ((== list `()))
-   ((fresh (x rest)
-           (== `(,x . ,rest) list)
-           (=/= el x)
-           (not-in-listo el rest)))))
-
-(define (lookupo x env t)
-  (fresh (rest y v)
-         (== `((,y . ,v) . ,rest) env)
-         (conde
-          ((== y x) (== v t))
-          ((=/= y x) (lookupo x rest t)))))
-
-(define (indexo lst index result)
-  (fresh (l lrest index^)
-         (== lst `(,l . ,lrest))
-         (conde ((== index `())
-                 (== result l))
-                ((=/= index `())
-                 (decremento index index^)
-                 (indexo lrest index^ result)))))
-
-(define (set-indexo lst index value result)
-  (fresh (l lrest rrest index^)
-         (== lst `(,l . ,lrest))
-         (conde ((== index `())
-                 (== result `(,value . ,lrest)))
-                (
-                 (== result `(,l . ,rrest))
-                 (=/= index `())
-                 (decremento index index^)
-                 (set-indexo lrest index^ value rrest)))))
-
-(define (membero item lst)
-  (fresh (first rest)
-         (== lst `(,first . ,rest))
-         (conde ((== first item)) ((membero item rest)))))
 
 (define (jnumbero exp)
   (fresh (val) (== exp `(number ,val))))

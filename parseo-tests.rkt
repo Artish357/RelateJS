@@ -1,5 +1,5 @@
 #lang racket
-(require "faster-miniKanren/mk.rkt" "js-structures.rkt" "parseo.rkt" "evalo.rkt")
+(require "faster-miniKanren/mk.rkt" "js-structures.rkt" "parseo.rkt" "evalo.rkt" "helpers.rkt")
 
 (module+ test
   (require rackunit)
@@ -24,9 +24,9 @@
          `(,(jnum 1)))
   (test= "Object field setting"
          (map humanize (run* (r) (fresh (code store i)
-                          (parseo-h  `(call (function () (var (x (object))) (:= (@ x "3") 3) (return x))) code)
-                          (evalo code (jref i) store)
-                          (indexo store i r))))
+                                        (parseo-h  `(call (function () (var (x (object))) (:= (@ x "3") 3) (return x))) code)
+                                        (evalo code (jref i) store)
+                                        (indexo store i r))))
          '((object (("public" object (("3" . 3))) ("private" object ())))))
   (test= "Object field updating"
          (map humanize (run* (r) (fresh (code store) (parseo-h  `(call (function () (var (x (object ("3" 2)))) (:= (@ x "3") 3) (return (@ x "3")))) code) (evalo code r store))))
@@ -41,18 +41,17 @@
   (test= "Range of 3"
          (run 1 (res) (fresh (func code store i obj public)
                              (parseo-h `(call (function ()
-                                                        (var (range (function (i)
+                                                        (var (range (function (i acc)
                                                                               (if (op === i 0)
-                                                                                  (return (object))
-                                                                                  (begin
-                                                                                    (var (res (call range (op - i 1))))
-                                                                                    (:= (@ res (op nat->char (op + 48 i))) i)
-                                                                                    (return res)
-                                                                                    )))))
-                                                        (return (call range 2)))) code)
+                                                                                  (return acc) 1)
+                                                                              (:= (@ acc (op nat->char (op + 48 i))) i)
+                                                                              (call range (op - i 1) acc)))
+                                                             (temp (object)))
+                                                        (call range 2 temp)
+                                                        (return temp))) code)
                              (evalo code (jref i) store)
                              (indexo store i (jobj obj))
                              (lookupo (jstr "public") obj res)
                              ))
-         `(,(jobj `((,(jstr "2") . ,(jnum 2)) (,(jstr "1") . ,(jnum 1))))))
+         `(,(jobj `((,(jstr "1") . ,(jnum 1)) (,(jstr "2") . ,(jnum 2))))))
   )
