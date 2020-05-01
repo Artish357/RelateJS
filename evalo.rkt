@@ -111,12 +111,15 @@
                  (evalo/propagation evalo-env cond env cond^ value
                                     store store^ store~
                                     next-address next-address^ next-address~
-                                    (conde ((== cond^ (jbool #t)) (evalo-env then env value store^ store~ next-address^ next-address~))
-                                           ((== cond^ (jbool #f)) (evalo-env else env value store^ store~ next-address^ next-address~))))))
-         ((fresh (cond body) ;; While
+                                    (conde ((== cond^ (jbool #f)) (evalo-env else env value store^ store~ next-address^ next-address~))
+                                           ((== cond^ (jbool #t)) (evalo-env then env value store^ store~ next-address^ next-address~))))))
+         ((fresh (cond body store^ next-address^ cond^) ;; While
                  (== exp (jwhile cond body))
-                 (evalo-env (jif cond (jbeg body (jwhile cond body)) (jundef))
-                            env value store store~ next-address next-address~)))
+                 (evalo/propagation evalo-env cond env cond^ value
+                                    store store^ store~
+                                    next-address next-address^ next-address~
+                                    (conde ((== cond^ (jbool #f)) (== value (jundef)) (== store^ store~) (== next-address^ next-address~))
+                                           ((== cond^ (jbool #t)) (evalo-env (jbeg body (jwhile cond body)) env value store^ store~ next-address^ next-address~))))))
          ((fresh (try-exp finally-exp try-value store^ next-address^) ;; Finally
                  (== exp (jfin try-exp finally-exp))
                  (evalo-env try-exp env try-value store store^ next-address next-address^)
