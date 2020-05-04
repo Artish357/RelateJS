@@ -12,8 +12,8 @@
          ((fresh (cond then else cond^ then^ else^) ;; if statements
                  (== exp `(if ,cond ,then ,else))
                  (== jexp (jbeg (jif cond^ then^ else^) (jundef)))
-                 (parse-env-listo `(,cond ,then ,else) `(,cond^ ,then^ ,else^) env) ;; TODO: simplify to use a custom parser
-                 ))
+                 (parse-env-expo cond cond^ env)
+                 (parse-env-listo `(,then ,else) `(,then^ ,else^) env)))
          ((varo exp jexp env)) ;; Var
          ((parse-foro exp jexp env))
          ((switcho exp jexp env))
@@ -51,10 +51,8 @@
                  (== exp `(while ,cond . ,body))
                  (== jexp (jcatch `break (jwhile cond^ body^^) `e (jundef)))
                  (parse-exp-envo cond cond^ env)
-                 (parse-envo body body^ env) ;; TODO: vars introduced in head are not in env
-                 (begino body^ body^^)
-                 ))
-         ))
+                 (parse-envo body body^ env)
+                 (begino body^ body^^)))))
 
 (define (parse-exp-envo exp jexp env)
   (conde ;; primitive values
