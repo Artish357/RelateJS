@@ -1,12 +1,9 @@
 #lang racket
 (require "faster-miniKanren/mk.rkt" "js-structures.rkt" "faster-miniKanren/numbers.rkt" "helpers.rkt")
-(provide evalo evalo-env evalo-ns)
+(provide evalo evalo-env)
 
 (define (evalo exp val store)
   (fresh (next-address^) (evalo-env exp `() val `() store `() next-address^)))
-
-(define (evalo-ns exp val)
-  (fresh (next-address^ store) (evalo-env exp `() val `() store `() next-address^)))
 
 (define (evalo-env exp env value store store~ next-address next-address~)
   (conde ((== exp value)

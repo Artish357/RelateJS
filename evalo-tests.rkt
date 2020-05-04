@@ -1,6 +1,9 @@
 #lang racket
 (require "evalo.rkt" "faster-miniKanren/mk.rkt" "js-structures.rkt")
 
+(define (evalo-ns exp val)
+  (fresh (next-address^ store) (evalo-env exp `() val `() store `() next-address^)))
+
 (module+ test
   (require rackunit)
   (define-syntax-rule (test= name expr output)
