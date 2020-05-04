@@ -20,7 +20,7 @@
                  (evalo/propagation evalo-env v env v^ value
                                     store store^ store~
                                     next-address next-address^ next-address~
-                                    (updato env k v^ env2)
+                                    (== env2 `((,k . ,v^) . ,env))
                                     (evalo-env exp2 env2 value store^ store~ next-address^ next-address~))))
          ((fresh (var) ;; Look up a variable
                  (== exp (jvar var))
@@ -38,7 +38,8 @@
                  (evalo/propagation evalo-env-list `(,func . ,args) env (value-list `(,(jclo params body cenv) . ,args-eval)) value
                                     store store^ store~
                                     next-address next-address^ next-address~
-                                    (update-objecto cenv params args-eval cenv^)
+                                    (zipo zipped params args-eval)
+                                    (appendo zipped cenv cenv^)
                                     (evalo-env body cenv^ value store^ store~ next-address^ next-address~))))
          ((fresh (obj-exp bindings key key^) ;; Get
                  (== exp (jget obj-exp key))
