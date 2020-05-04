@@ -9,7 +9,7 @@
   (conde ((== exp value)
           (== store store~)
           (== next-address next-address~)
-          (conde ((jnumbero exp)) ((objecto exp)) ((closuro exp)) ((referenso exp)) ((breako exp)) ((boolo exp)) ((jstro exp))
+          (conde ((jnumbero exp)) ((objecto exp)) ((boolo exp)) ((jstro exp))
                  ((== exp (jundef))) ((== exp (jnul)))) ;; Values
           )
          ((fresh (k v v^ exp2 env2 store^ next-address^) ;; Let
@@ -240,14 +240,5 @@
 (define (objecto exp)
   (fresh (binds) (== exp `(object ,binds))))
 
-(define (closuro exp)
-  (fresh (params body env) (== exp `(closure ,params ,body ,env))))
-
-(define (referenso exp)
-  (fresh (addr) (== exp (jref addr))))
-
 (define (boolo exp)
   (fresh (b) (== exp (jbool b))))
-
-(define (breako exp)
-  (fresh (label value) (== exp (jbrk label value))))
