@@ -178,4 +178,13 @@
   (test= "Combined delta test" ;; chr(ord('a')+2) -> 'c'
          (run* (res) (fresh (store) (evalo/ns (jdelta `nat->char `(,(jdelta `+ `(,(jdelta `char->nat `(,(jstr "a"))) ,(jnum 2))))) res)))
          `(,(jstr "c")))
+  (test= "Try/finally no returns"
+         (run* (res) (evalo/ns (jfin (jnum 1) (jnum 2)) res))
+         `(,(jnum 1)))
+  (test= "Try/finally with return in try"
+         (run* (res) (evalo/ns (jfin (jthrow 'return (jnum 1)) (jnum 2)) res))
+         `(,(jbrk 'return (jnum 1))))
+  (test= "Try/finally with return in finally"
+         (run* (res) (evalo/ns (jfin (jthrow 'return (jnum 1)) (jthrow 'return (jnum 2))) res))
+         `(,(jbrk 'return (jnum 2))))
   )

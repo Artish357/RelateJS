@@ -108,11 +108,12 @@
                                     next-address next-address^ next-address~
                                     (conde ((== cond^ (jbool #f)) (== value (jundef)) (== store^ store~) (== next-address^ next-address~))
                                            ((== cond^ (jbool #t)) (eval-envo (jbeg body (jwhile cond body)) env value store^ store~ next-address^ next-address~))))))
-         ((fresh (try-exp finally-exp try-value store^ next-address^) ;; Finally
+         ((fresh (try-exp finally-exp try-value finally-value store^ next-address^) ;; Finally
                  (== exp (jfin try-exp finally-exp))
                  (eval-envo try-exp env try-value store store^ next-address next-address^)
-                 (evalo/propagation eval-envo finally-exp env (value-list value) value
-                                    store^ store~ store~ next-address next-address~ next-address~)))
+                 (evalo/propagation eval-envo finally-exp env finally-value value
+                                    store^ store~ store~ next-address next-address~ next-address~
+                                    (== value try-value))))
          ((fresh (label label^ try-exp catch-var catch-exp try-value store^ next-address^ env^ break-value first rest) ;; Catch
                  (== exp (jcatch label try-exp catch-var catch-exp))
                  (eval-envo try-exp env try-value store store^ next-address next-address^)
