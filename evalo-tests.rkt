@@ -84,18 +84,27 @@
            (run* (val store next-address) (eval-envo (jall (jnum 100)) `() val `() store `() next-address))
            `(( ,(jref `()) (,(jnum 100))  (()) )))
     (test= "Dereference"
-           (run* (val store next-address) (eval-envo (jderef (jref `())) `() val `(,(jnum 123)) store `(()) next-address))
-           `((,(jnum 123) (,(jnum 123))  (()) )))
+           (run* (val store next-address)
+             (eval-envo (jlet 'x (jall (jnum 123)) (jderef (jvar 'x)))
+                        `() val `() store `() next-address))
+           `((,(jnum 123) (,(jnum 123)) (()))))
     (test= "Assignment"
-           (run* (val store next-address) (eval-envo (jassign (jref `()) (jnum 5)) `() val `(,(jnum 0)) store `(()) next-address))
+           (run* (val store next-address)
+             (eval-envo (jlet 'x (jall (jnum 0)) (jassign (jvar 'x) (jnum 5)))
+                        `() val `() store `() next-address))
            `((,(jnum 5) (,(jnum 5))  (()) )))
     (test= "Combined memory functions"
-           (run* (val store next-address) (eval-envo (jassign (jall (jnum 66)) (jderef (jref `()))) `() val `(,(jnum 33)) store `(()) next-address))
+           (run* (val store next-address)
+             (eval-envo (jlet 'x (jall (jnum 0))
+                              (jbeg (jassign (jvar 'x) (jnum 33))
+                                    (jderef (jvar 'x))))
+                        `() val `(,(jnum 33)) store `(()) next-address))
            `((,(jnum 33) (,(jnum 33) ,(jnum 33))  ((())) )))
     (let ((testfunc (jfun `(x)
-                          (jbeg
-                           (jall (jvar `x))
-                           (jif (jderef (jref `())) (jnum 1) (jnum 0))))))
+                          (jlet 'y (jall (jvar `x))
+                                (jif (jderef (jvar 'y))
+                                     (jnum 1)
+                                     (jnum 0))))))
       (test= "Control structures #1"
              (run* (val) (evalo/ns (japp testfunc `(,(jbool #t))) val))
              `(,(jnum 1)))
@@ -103,19 +112,19 @@
              (run* (val) (evalo/ns (japp testfunc `(,(jbool #f))) val))
              `(,(jnum 0)))
       )
-    (let ([breakval (jbrk `error `e)])
+    (let ([breakval (jthrow `error (jnum 11))])
       (test= "Basic break"
              (run* (val) (evalo/ns breakval val))
-             `(,breakval))
+             `(,(jbrk `error (jnum 11))))
       (test= "Catch, no break"
              (run* (val) (evalo/ns (jcatch `error (jnum 0) `err-var (jvar `err-var)) val))
              `(,(jnum 0)))
       (test= "Basic catch"
              (run* (val) (evalo/ns (jcatch `error breakval `err-var (jvar `err-var)) val))
-             `(e))
+             `(,(jnum 11)))
       (test= "Basic catch, wrong label"
              (run* (val) (evalo/ns (jcatch `loop-break breakval `err-var (jvar `err-var)) val))
-             `(,breakval))
+             `(,(jbrk `error (jnum 11))))
       )
     )
   (test= "typeof"
