@@ -20,7 +20,7 @@
                  (evalo/propagation evalo-env v env v^ value
                                     store store^ store~
                                     next-address next-address^ next-address~
-                                    (== env2 `((,k . ,v^) . ,env))
+                                    (updato env k v^ env2)
                                     (evalo-env exp2 env2 value store^ store~ next-address^ next-address~))))
          ((fresh (var) ;; Look up a variable
                  (== exp (jvar var))
@@ -38,8 +38,7 @@
                  (evalo/propagation evalo-env-list `(,func . ,args) env (value-list `(,(jclo params body cenv) . ,args-eval)) value
                                     store store^ store~
                                     next-address next-address^ next-address~
-                                    (zipo zipped params args-eval)
-                                    (appendo cenv zipped cenv^)
+                                    (update-objecto cenv params args-eval cenv^)
                                     (evalo-env body cenv^ value store^ store~ next-address^ next-address~))))
          ((fresh (obj-exp bindings key key^) ;; Get
                  (== exp (jget obj-exp key))
@@ -51,24 +50,15 @@
                                            ((== value (jundef))
                                             (absento-keys key^ bindings) ;; not found
                                             )))))
-         ((fresh (obj-exp bindings key key^ val val^) ;; Create field
-                 (== exp (jset obj-exp key val))
-                 (evalo/propagation evalo-env-list `(,obj-exp ,key ,val) env (value-list `(,(jobj bindings) ,key^ ,val^)) value
-                                    store store~ store~
-                                    next-address next-address~ next-address~
-                                    (== value (jobj (cons (cons key^ val^) bindings)))
-                                    (typeofo key^ (jstr "string") store~)
-                                    (absento-keys key^ bindings))))
-         ((fresh (obj-exp bindings bindings^ key key^ val val^ v) ;; Update field
+         ((fresh (obj-exp bindings bindings^ key key^ val val^ v) ;; Create/update field
                  (== exp (jset obj-exp key val))
                  (evalo/propagation evalo-env-list `(,obj-exp ,key ,val) env (value-list `(,(jobj bindings) ,key^ ,val^)) value
                                     store store~ store~
                                     next-address next-address~ next-address~
                                     (== value (jobj bindings^))
                                     (typeofo key^ (jstr "string") store~)
-                                    (membero `(,key^ . ,v) bindings)
-                                    (updato bindings key^ val^ bindings^)
-                                    )))
+                                    (== value (jobj bindings^))
+                                    (updato bindings key^ val^ bindings^))))
          ((fresh (obj-exp bindings bindings^ key key^ store^ next-address^) ;; Delete field
                  (== exp (jdel obj-exp key))
                  (evalo/propagation evalo-env-list `(,obj-exp ,key) env (value-list `(,(jobj bindings) ,key^)) value

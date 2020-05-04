@@ -22,16 +22,25 @@
 
 (define (updato obj key value result)
   (conde ((== obj `())
-          (== result `()))
+          (== result `((,key . ,value))))
          ((fresh (orest rrest k v v2)
                  (== obj    `((,k . ,v ) . ,orest))
                  (== result `((,k . ,v2) . ,rrest))
                  (conde ((== k key)
                          (== v2 value)
                          (== orest rrest))
-                        ((== v v2)
-                         (=/= k key)
+                        ((=/= k key)
+                         (== v2 v)
                          (updato orest key value rrest)))))))
+
+(define (update-objecto obj keys values result)
+  (fresh (k krest v vrest obj^)
+         (conde
+          ((== keys `()) (== values `()) (== result obj))
+          ((== keys `(,k . ,krest))
+           (== values `(,v . ,vrest))
+           (updato obj k v obj^)
+           (update-objecto obj^ krest vrest result)))))
 
 (define (deleto obj key result)
   (conde ((== obj `()) (== result `()))
@@ -88,8 +97,7 @@
          (== lst `(,l . ,lrest))
          (conde ((== index `())
                  (== result `(,value . ,lrest)))
-                (
-                 (== result `(,l . ,rrest))
+                ((== result `(,l . ,rrest))
                  (=/= index `())
                  (decremento index index^)
                  (set-indexo lrest index^ value rrest)))))

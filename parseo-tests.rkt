@@ -27,7 +27,7 @@
                                         (parseo-h  `(call (function () (var (x (object))) (:= (@ x "3") 3) (return x))) code)
                                         (evalo code (jref i) store)
                                         (indexo store i r))))
-         '((object (("public" object (("3" . 3))) ("private" object ())))))
+         '((object (("private" object ()) ("public" object (("3" . 3)))))))
   (test= "Object field updating"
          (map humanize (run* (r) (fresh (code store) (parseo-h  `(call (function () (var (x (object ("3" 2)))) (:= (@ x "3") 3) (return (@ x "3")))) code) (evalo code r store))))
          '(3))

@@ -36,7 +36,11 @@
            `(,(jobj `((,(jstr "1") . ,(jnum 2)) (,(jstr "3") . ,(jnum 4)) (,(jstr "5") . ,(jnum 100))))))
     (test= "Create"
            (run* (res) (fresh (store) (evalo-ns (jset (jobj 1to6zip) (jstr "0") (jnum 100)) res)))
-           `(,(jobj `((,(jstr "0") . ,(jnum 100)) . ,1to6zip))))
+           '((object
+              (((string ((1 0 0 0 1 1))) number (0 1))
+               ((string ((1 1 0 0 1 1))) number (0 0 1))
+               ((string ((1 0 1 0 1 1))) number (0 1 1))
+               ((string ((0 0 0 0 1 1))) number (0 0 1 0 0 1 1))))))
     (test= "Create, empty object"
            (run* (res) (fresh (store) (evalo-ns (jset (jobj `()) (jstr "0") (jnum 100)) res)))
            `(,(jobj `((,(jstr "0") . ,(jnum 100))))))
