@@ -33,21 +33,21 @@
                  (== next-address next-address~)))
          ((fresh (func params args args-eval body cenv cenv^ zipped value^ store^ next-address^) ;; Function application
                  (== exp (japp func args))
-                 (== value^ (value-list `(,(jclo params body cenv) . ,args-eval)))
                  (eval-env-listo `(,func . ,args) env value^ store store^ next-address next-address^)
                  (effect-propagateo value^ value
                                     store^ store~
                                     next-address^ next-address~
+                                    (== value^ (value-list `(,(jclo params body cenv) . ,args-eval)))
                                     (zipo zipped params args-eval)
                                     (appendo zipped cenv cenv^)
                                     (eval-envo body cenv^ value store^ store~ next-address^ next-address~))))
          ((fresh (obj-exp bindings key key^ value^) ;; Get
                  (== exp (jget obj-exp key))
-                 (== value^ (value-list `(,key^ ,(jobj bindings))))
                  (eval-env-listo `(,key ,obj-exp) env value^ store store~ next-address next-address~)
                  (effect-propagateo value^ value
                                     store~ store~
                                     next-address~ next-address~
+                                    (== value^ (value-list `(,key^ ,(jobj bindings))))
                                     (typeofo key^ (jstr "string") store~)
                                     (conde ((membero `(,key^ . ,value) bindings)) ;; found
                                            ((== value (jundef))
@@ -55,21 +55,21 @@
                                             )))))
          ((fresh (obj-exp bindings bindings^ key key^ val val^ v value^) ;; Create/update field
                  (== exp (jset obj-exp key val))
-                 (== value^ (value-list `(,(jobj bindings) ,key^ ,val^)))
                  (eval-env-listo `(,obj-exp ,key ,val) env value^ store store~ next-address next-address~)
                  (effect-propagateo value^ value
                                     store~ store~
                                     next-address~ next-address~
+                                    (== value^ (value-list `(,(jobj bindings) ,key^ ,val^)))
                                     (== value (jobj bindings^))
                                     (typeofo key^ (jstr "string") store~)
                                     (updateo bindings key^ val^ bindings^))))
          ((fresh (obj-exp bindings bindings^ key key^ store^ next-address^ value^) ;; Delete field
                  (== exp (jdel obj-exp key))
-                 (== value^ (value-list `(,(jobj bindings) ,key^)))
                  (eval-env-listo `(,obj-exp ,key) env value^ store store~ next-address next-address~)
                  (effect-propagateo value^ value
                                     store~ store~
                                     next-address~ next-address~
+                                    (== value^ (value-list `(,(jobj bindings) ,key^)))
                                     (== value (jobj bindings^))
                                     (typeofo key^ (jstr "string") store~)
                                     (deleto bindings key^ bindings^)
@@ -87,19 +87,19 @@
                                     )))
          ((fresh (addr-exp addr value^) ;; Fetch from memory
                  (== exp (jderef addr-exp))
-                 (== value^ (jref addr))
                  (eval-envo addr-exp env value^ store store~ next-address next-address~)
                  (effect-propagateo value^ value
                                     store~ store~
                                     next-address~ next-address~
+                                    (== value^ (jref addr))
                                     (indexo store~ addr value))))
          ((fresh (var val addr val^ store^ value^) ;; Assign to memory address
                  (== exp (jassign var val))
-                 (== value^ (value-list `(,(jref addr) ,val^)))
                  (eval-env-listo `(,var ,val) env value^ store store^ next-address next-address~)
                  (effect-propagateo value^ value
                                     store^ store~
                                     next-address~ next-address~
+                                    (== value^ (value-list `(,(jref addr) ,val^)))
                                     (== value val^)
                                     (set-indexo store^ addr val^ store~)
                                     )))
@@ -159,11 +159,11 @@
 (define (jdeltao env exp value store store~ next-address next-address~)
   (fresh (func vals op1 op2 v1 v2 vals^ res rem value^)
          (== exp (jdelta func vals))
-         (== value^ (value-list vals^))
          (eval-env-listo vals env value^ store store~ next-address next-address~)
          (effect-propagateo value^ value
                             store~ store~
                             next-address~ next-address~
+                            (== value^ (value-list vals^))
                             (conde ((== `(,func (,op1)) `(typeof ,vals^)) ;; Typeof
                                     (typeofo op1 value store~))
                                    ((== `(,v1) vals^) ;; Char -> nat
