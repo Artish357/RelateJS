@@ -12,7 +12,7 @@
          ((fresh (cond then else cond^ then^ else^) ;; if statements
                  (== exp `(if ,cond ,then ,else))
                  (== jexp (jbeg (jif cond^ then^ else^) (jundef)))
-                 (parse-env-expo cond cond^ env)
+                 (parse-exp-envo cond cond^ env)
                  (parse-env-listo `(,then ,else) `(,then^ ,else^) env)))
          ((varo exp jexp env)) ;; Var
          ((parse-foro exp jexp env))
