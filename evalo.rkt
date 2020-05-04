@@ -93,7 +93,8 @@
          ((fresh (first second dummy) ;; Begin-discard
                  (== exp (jbeg first second))
                  (evalo/propagation eval-env-listo `(,first ,second) env (value-list `(,dummy ,value)) value
-                                    store store~ store~ next-address next-address~ next-address~)))
+                                    store store~ store~
+                                    next-address next-address~ next-address~)))
          ((fresh (cond cond^ then else store^ next-address^) ;; If statements
                  (== exp (jif cond then else))
                  (evalo/propagation eval-envo cond env cond^ value
@@ -112,7 +113,8 @@
                  (== exp (jfin try-exp finally-exp))
                  (eval-envo try-exp env try-value store store^ next-address next-address^)
                  (evalo/propagation eval-envo finally-exp env finally-value value
-                                    store^ store~ store~ next-address next-address~ next-address~
+                                    store^ store~ store~
+                                    next-address next-address~ next-address~
                                     (== value try-value))))
          ((fresh (label label^ try-exp catch-var catch-exp try-value store^ next-address^ env^ break-value first rest) ;; Catch
                  (== exp (jcatch label try-exp catch-var catch-exp))
@@ -209,14 +211,24 @@
                                        store store^ store~
                                        next-address next-address^ next-address~
                                        cont ...)
-  (fresh (intermediate-val label bval tag rest)
-         (eval-funco exp env intermediate-val store store^ next-address next-address^)
-         (conde ((== (jbrk label bval) intermediate-val)
-                 (== `(,value ,store~ ,next-address~) `(,intermediate-val ,store^ ,next-address^)))
-                ((== `(,tag . ,rest) intermediate-val)
-                 (== val intermediate-val)
-                 (=/= tag `break)
-                 cont ...))))
+  (fresh (value^)
+         (eval-funco exp env value^ store store^ next-address next-address^)
+         (effect-propagateo value^ value
+                            store^ store~
+                            next-address^ next-address~
+                            (== val value^)
+                            cont ...)))
+
+(define-syntax-rule (effect-propagateo value^        value~
+                                       store^        store~
+                                       next-address^ next-address~
+                                       cont ...)
+  (fresh (label bval tag rest)
+    (conde ((== (jbrk label bval) value^)
+            (== `(,value~ ,store~ ,next-address~) `(,value^ ,store^ ,next-address^)))
+           ((== `(,tag . ,rest) value^)
+            (=/= tag `break)
+            cont ...))))
 
 (define (eval-env-listo elist env vlist store store~ next-address next-address~)
   (conde ((== elist `()) (== vlist (value-list `())) (== store store~) (== next-address next-address~))
