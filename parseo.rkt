@@ -1,6 +1,6 @@
 #lang racket
 (require "js-structures.rkt" "faster-miniKanren/mk.rkt" "evalo.rkt" "helpers.rkt")
-(provide pull-varo pull-var-listo pull-pairso humanize dehumanize parseo parseo-h parseo-nh)
+(provide pull-varo pull-var-listo pull-pairso humanize dehumanize parseo-h parseo)
 
 (define (parse-envo exp jexp env)
   (conde ((parse-exp-envo exp jexp env)) ;; Expressions
@@ -55,9 +55,6 @@
                  (begino body^ body^^)
                  ))
          ))
-
-(define (parseo exp jexp)
-  (parse-envo exp jexp `()))
 
 (define (parse-exp-envo exp jexp env)
   (conde ;; primitive values
@@ -135,14 +132,9 @@
                  (parse-exp-env-listo rest rest^ env)
                  ))))
 
-(define (parseo-h exp jexp)
-  (let ([exp (dehumanize exp)])
-    (fresh (vars exp^ allocations body)
-           (pull-varo exp vars)
-           (allocato vars body jexp)
-           (parse-envo exp body vars))))
+(define (parseo-h exp jexp) (parseo (dehumanize exp) jexp))
 
-(define (parseo-nh exp jexp)
+(define (parseo exp jexp)
   (fresh (vars exp^ allocations body)
          (pull-varo exp vars)
          (allocato vars body jexp)
