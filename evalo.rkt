@@ -62,7 +62,6 @@
                                     next-address~ next-address~
                                     (== value (jobj bindings^))
                                     (typeofo key^ (jstr "string") store~)
-                                    (== value (jobj bindings^))
                                     (updateo bindings key^ val^ bindings^))))
          ((fresh (obj-exp bindings bindings^ key key^ store^ next-address^ value^) ;; Delete field
                  (== exp (jdel obj-exp key))
