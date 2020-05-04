@@ -21,9 +21,9 @@
          5)
   (test= "Echo"
          (run 1 (out) (fresh (c1 c2 s1 s2)
-                             (parseo-h `(call (function (x) ,out) 5) c1)
+                             (parseo/readable `(call (function (x) ,out) 5) c1)
                              (evalo c1 (jnum 5) s1)
-                             (parseo-h `(call (function (x) ,out) "Hello World!") c2)
+                             (parseo/readable `(call (function (x) ,out) "Hello World!") c2)
                              (evalo c2 (jstr "Hello World!") s2)
                              ))
          `((return x)))
@@ -38,14 +38,14 @@
          `(+ *))
   (test= "if/var case"
          (length (run 1 (inside) (fresh (code store)
-                                        (parseo-h `(call (function (x) (return (call (function () (if #f (var x) (return x)))))) 42)
+                                        (parseo/readable `(call (function (x) (return (call (function () (if #f (var x) (return x)))))) 42)
                                                   code)
                                         (evalo code (jundef) store)
                                         )))
          1)
 ;    (test= "Range of 3"
 ;           (run 1 (res) (fresh (func code i obj public temp store)
-;                                           (parseo-h `(call (function ()
+;                                           (parseo/readable `(call (function ()
 ;                                                                      (var (range (function (i acc)
 ;                                                                                            (if (op === i 0)
 ;                                                                                                (return acc)
@@ -65,7 +65,7 @@
 ;           1)
   (test= "Base case synthesis for fibonacci sequence"
          (run 1 (a b) (fresh (code inside i obj store public)
-                             (parseo-h `(call (function ()
+                             (parseo/readable `(call (function ()
                                                         (var (fib (function (x)
                                                                             (switch x
                                                                                     (1 (return ,a))
