@@ -46,7 +46,7 @@
                                     (typeofo key^ (jstr "string") store~)
                                     (conde ((membero `(,key^ . ,value) bindings)) ;; found
                                            ((== value (jundef))
-                                            (absento-keys key^ bindings) ;; not found
+                                            (absent-keyso key^ bindings) ;; not found
                                             )))))
          ((fresh (obj-exp bindings bindings^ key key^ val val^ v) ;; Create/update field
                  (== exp (jset obj-exp key val))
@@ -56,7 +56,7 @@
                                     (== value (jobj bindings^))
                                     (typeofo key^ (jstr "string") store~)
                                     (== value (jobj bindings^))
-                                    (updato bindings key^ val^ bindings^))))
+                                    (updateo bindings key^ val^ bindings^))))
          ((fresh (obj-exp bindings bindings^ key key^ store^ next-address^) ;; Delete field
                  (== exp (jdel obj-exp key))
                  (evalo/propagation eval-env-listo `(,obj-exp ,key) env (value-list `(,(jobj bindings) ,key^)) value
@@ -189,7 +189,7 @@
                               (conde ((== value (jstr "object"))
                                       (indexo store temp `(object ,fields))
                                       (lookupo (jstr "private") fields (jobj priv))
-                                      (absento-keys (jstr "call") priv))
+                                      (absent-keyso (jstr "call") priv))
                                      ((== value (jstr "function"))
                                       (indexo store temp `(object ,fields))
                                       (lookupo (jstr "private") fields (jobj priv))

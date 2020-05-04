@@ -15,12 +15,12 @@
                  (== k `(,x . ,k2))
                  (keyso o2 k2)))))
 
-(define (absento-keys val obj)
+(define (absent-keyso val obj)
   (fresh (keys)
          (keyso obj keys)
          (not-in-listo val keys)))
 
-(define (updato obj key value result)
+(define (updateo obj key value result)
   (conde ((== obj `())
           (== result `((,key . ,value))))
          ((fresh (orest rrest k v v2)
@@ -31,7 +31,7 @@
                          (== orest rrest))
                         ((=/= k key)
                          (== v2 v)
-                         (updato orest key value rrest)))))))
+                         (updateo orest key value rrest)))))))
 
 (define (update-objecto obj keys values result)
   (fresh (k krest v vrest obj^)
@@ -39,7 +39,7 @@
           ((== keys `()) (== values `()) (== result obj))
           ((== keys `(,k . ,krest))
            (== values `(,v . ,vrest))
-           (updato obj k v obj^)
+           (updateo obj k v obj^)
            (update-objecto obj^ krest vrest result)))))
 
 (define (deleto obj key result)
