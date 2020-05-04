@@ -182,7 +182,7 @@
                        (== value (jstr "string")))
                       ((== exp  `(number . ,temp))
                        (== value (jstr "number")))
-                      ((== exp  `(boolean . ,temp)) 
+                      ((== exp  `(boolean . ,temp))
                        (== value (jstr "boolean")))
                       ((fresh (fields priv call)
                               (== exp (jref temp))

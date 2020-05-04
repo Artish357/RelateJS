@@ -166,7 +166,7 @@
   (test= "string-< #5"
          (run* (res) (fresh (store) (evalo-ns (jdelta `string-< `(,(jstr "H") ,(jstr "H"))) res)))
          `(,(jbool #f)))
-  (test= "Combined delta test" ;; chr(ord('a')+2) -> 'c' 
+  (test= "Combined delta test" ;; chr(ord('a')+2) -> 'c'
          (run* (res) (fresh (store) (evalo-ns (jdelta `nat->char `(,(jdelta `+ `(,(jdelta `char->nat `(,(jstr "a"))) ,(jnum 2))))) res)))
          `(,(jstr "c")))
   )
