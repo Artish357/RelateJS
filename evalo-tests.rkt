@@ -80,6 +80,22 @@
     (test= "Function application, parameter #3"
            (run* (res) (fresh (store) (evalo/ns (japp (jfun `(x y z) (jvar `z)) 1to3) res)))
            `(,(jnum 3)))
+    (test= "Shadowing 1"
+           (run* (res) (evalo/ns (jlet 'x (jnum 1)
+                                       (jlet 'x (jnum 2) (jvar 'x)))
+                                 res))
+           `(,(jnum 2)))
+    (test= "Shadowing 2"
+           (run* (res) (evalo/ns (jlet 'x (jnum 1)
+                                       (japp (jfun `(x) (jvar `x)) (list (jnum 2))))
+                                 res))
+           `(,(jnum 2)))
+    (test= "Shadowing 3"
+           (run* (res) (evalo/ns (japp (jfun `(x)
+                                             (jlet 'x (jnum 1) (jvar `x)))
+                                       (list (jnum 2)))
+                                 res))
+           `(,(jnum 1)))
     (test= "Allocation"
            (run* (val store next-address) (eval-envo (jall (jnum 100)) `() val `() store `() next-address))
            `(( ,(jref `()) (,(jnum 100))  (()) )))
