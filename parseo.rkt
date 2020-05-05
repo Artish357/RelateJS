@@ -54,27 +54,23 @@
                  (begino body^ body^^)))))
 
 (define (parse-exp-envo exp jexp env)
-  (conde ;; primitive values
-   ((== exp jexp)(fresh (x) (conde ((== exp `(number ,x)))
-                                   ((== exp `(string ,x))))))
-   ((== exp #t) (== jexp (jbool #t)))
-   ((== exp #f) (== jexp (jbool #f)))
+  (conde
+   ;; Variables
    ((symbolo exp) (== jexp (jderef (jvar exp))))
-   ((== exp (jundef)) (== jexp (jundef)))
-   ((== exp (jnul)) (== jexp (jnul)))
-   ((objecto exp jexp env))
-   ((functiono exp jexp env)) ;; Functions
-   ((fresh (func args func^ args^) ;; Function call
-           (== exp `(call ,func . ,args))
-           (== jexp (jcatch `return (japp (jget (jget (jderef func^) (jstr "private")) (jstr "call")) args^) `result (jvar `result)))
-           (parse-exp-env-listo `(,func . ,args) `(,func^ . ,args^) env)
-           ))
-   ((fresh (val val^ index index^) ;; Field getter
-           (== exp `(@ ,val ,index))
-           (== jexp (jget (jget (jderef val^) (jstr "public")) index^))
-           (parse-exp-env-listo `(,val ,index) `(,val^ ,index^) env)
-           ))
-   ((fresh (var val var^ val^) ;; Assignment
+   ;; Simple literals
+   ((conde ((== exp jexp) (fresh (x) (conde ((== exp `(number ,x)))
+                                            ((== exp `(string ,x))))))
+           ((== exp #t) (== jexp (jbool #t)))
+           ((== exp #f) (== jexp (jbool #f)))
+           ((== exp (jnul)) (== jexp (jnul)))
+           ((== exp (jundef)) (== jexp (jundef)))))
+   ;; Primitive operations
+   ((fresh (op vals vals^)
+           (== exp `(op ,op . ,vals))
+           (== jexp (jdelta op vals^))
+           (parse-exp-env-listo vals vals^ env)))
+   ;; Assignment
+   ((fresh (var val var^ val^)
            (== exp `(:= ,var ,val))
            (conde ((symbolo var) (== jexp (jassign (jvar var) val^)))
                   ((fresh (obj obj^ key key^ obj-parsed temp-var)
@@ -89,18 +85,24 @@
                                      (jassign obj^ (jvar temp-var)))
                                     val^))
                           (parse-exp-env-listo `(,key ,obj) `(,key^ ,obj^) env))))
-           (parse-exp-envo val val^ env)
-           ))
-   ((fresh (op vals vals^) ;; Basic operations
-           (== exp `(op ,op . ,vals))
-           (== jexp (jdelta op vals^))
-           (parse-exp-env-listo vals vals^ env)
-           ))
-   ((fresh (exps exps^) ;; Comma
+           (parse-exp-envo val val^ env)))
+   ;; Field access
+   ((fresh (val val^ index index^)
+           (== exp `(@ ,val ,index))
+           (== jexp (jget (jget (jderef val^) (jstr "public")) index^))
+           (parse-exp-env-listo `(,val ,index) `(,val^ ,index^) env)))
+   ;; Function call
+   ((fresh (func args func^ args^)
+           (== exp `(call ,func . ,args))
+           (== jexp (jcatch `return (japp (jget (jget (jderef func^) (jstr "private")) (jstr "call")) args^) `result (jvar `result)))
+           (parse-exp-env-listo `(,func . ,args) `(,func^ . ,args^) env)))
+   ((objecto exp jexp env))
+   ((functiono exp jexp env))
+   ;; Comma expression sequencing
+   ((fresh (exps exps^)
            (== exp `(comma . ,exps))
            (parse-exp-env-listo exps exps^ env)
-           (begino exps^ jexp)))
-   ))
+           (begino exps^ jexp)))))
 
 (define (parse-foro exp jexp env)
   (fresh (init init^ cond cond^ inc inc^ body body^ body^^)
