@@ -16,7 +16,6 @@
                  (parse-env-listo `(,then ,else) `(,then^ ,else^) env)))
          ((varo exp jexp env)) ;; Var
          ((parse-foro exp jexp env))
-         ((switcho exp jexp env))
          ;; different breaks
          ((fresh (val val^)  ;; return
                  (== exp `(return ,val))
@@ -220,23 +219,6 @@
                  (begino rest rest-exp)
                  ))))
 
-(define (switcho exp jexp env)
-  (fresh (pairs val val^ jexp^)
-         (== exp `(switch ,val . ,pairs))
-         (== jexp (jbeg jexp^ (jundef)))
-         (parse-exp-envo val val^ env)
-         (switch-helpero pairs val^ jexp^ env)))
-
-(define (switch-helpero pairs val jexp env)
-  (conde ((== pairs `())
-          (== jexp (jundef)))
-         ((fresh (target body target^ body^ rest rest-exp)
-                 (== pairs `((,target ,body) . ,rest))
-                 (== jexp (jif (jdelta `=== `(,val ,target^)) body^ rest-exp))
-                 (parse-exp-envo target target^ env)
-                 (parse-envo body body^ env)
-                 (switch-helpero rest val rest-exp env)))))
-
 (define (hoist-varo exp vars)
   (conde ((== vars `())
           (fresh (x) (conde ((== exp `(return ,x)))
@@ -257,9 +239,6 @@
                  (hoist-var-expo cond temp)
                  (hoist-var-listo body temp^)
                  (appendo temp temp^ vars)))
-         ((fresh (t x)
-                 (== exp `(switch ,t . ,x))
-                 (hoist-var-switcho x vars)))
          ((fresh (exps)
                  (== exp `(begin . ,exps))
                  (hoist-var-listo exps vars)))
@@ -267,14 +246,6 @@
                  (== exp `(for (,init ,cond ,inc) . ,body))
                  (hoist-var-listo `(,init . ,body) vars)))
          ))
-
-(define (hoist-var-switcho switch vars)
-  (conde ((== switch `()) (== vars `()))
-         ((fresh (case code rest v v2)
-                 (== switch `((,case ,code) . ,rest))
-                 (hoist-varo code v)
-                 (appendo v v2 vars)
-                 (hoist-var-switcho rest v2)))))
 
 (define (hoist-var-expo exp vars)
   (fresh (x)
