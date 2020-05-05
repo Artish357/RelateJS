@@ -96,4 +96,41 @@
                              (evalo code (jbool #t) store)
                              ))
          `((,(jnum 0) ,(jnum 1))))
+
+  (test= "For loop range sum (~550 milliseconds)"
+         (run 1 (fragment)
+           (PBE (lambda (n)
+                  `(call (function ()
+                                   (var (total 0))
+                                   (for ((var (i 0)) (op < i ,n) (:= i (op + i 1)))
+                                     (:= total . ,fragment))
+                                   (return total))))
+                `(((3) ,(jnum 3))
+                  ((4) ,(jnum 6)))))
+         '(((op + total i))))
+#|
+  (test= "For loop range sum (slow, ~27 seconds)"
+         (run 1 (fragment)
+           (PBE (lambda (n)
+                  `(call (function ()
+                                   (var (total 0))
+                                   (for ((var (i 0)) (op < i ,n) (:= i (op + i 1)))
+                                     (:= . ,fragment))
+                                   (return total))))
+                `(((3) ,(jnum 3))
+                  ((4) ,(jnum 6)))))
+         '((total (op + total i))))
+
+  (test= "For loop range sum (very slow, ~12 minutes)"
+         (run 1 (fragment)
+           (PBE (lambda (n)
+                  `(call (function ()
+                                   (var (total 0))
+                                   (for ((var (i 0)) (op < i ,n) (:= i (op + i 1)))
+                                     ,fragment)
+                                   (return total))))
+                `(((3) ,(jnum 3))
+                  ((4) ,(jnum 6)))))
+         '((var (total (op + i total)))))
+|#
   )
