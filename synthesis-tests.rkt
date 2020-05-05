@@ -1,5 +1,16 @@
 #lang racket
 (require "faster-miniKanren/mk.rkt" "evalo.rkt" "parseo.rkt" "js-structures.rkt" "helpers.rkt")
+
+(define (PBE make-js examples)
+  (foldl (lambda (example prev-goal)
+           (define args            (car  example))
+           (define expected-result (cadr example))
+           (fresh (code store)
+             prev-goal
+             (parseo/readable (apply make-js args) code)
+             (evalo code expected-result store)))
+         (== #t #t) examples))
+
 (module+ test
   (require rackunit)
   (define-syntax-rule (test= name expr output)
