@@ -94,7 +94,7 @@
    ;; Function call
    ((fresh (func args func^ args^)
            (== exp `(call ,func . ,args))
-           (== jexp (jcatch `return (japp (jget (jget (jderef func^) (jstr "private")) (jstr "call")) args^) `result (jvar `result)))
+           (== jexp (japp (jget (jget (jderef func^) (jstr "private")) (jstr "call")) args^))
            (parse-exp-env-listo `(,func . ,args) `(,func^ . ,args^) env)))
    ((objecto exp jexp env))
    ((functiono exp jexp env))
@@ -179,7 +179,8 @@
          (== exp `(function ,params . ,body))
          (== jexp (jall (jset (jobj `((,(jstr "public") . ,(jobj `()))))
                               (jstr "private")
-                              (jset (jobj `()) (jstr "call") (jfun params (jbeg body^^^^ (jundef)))))))
+                              (jset (jobj `()) (jstr "call") (jfun params
+                                                                   (jcatch `return (jbeg body^^^^ (jundef)) `result (jvar `result)))))))
          (hoist-var-listo body vars)
          (differenceo vars params vars^)
          (appendo vars^ env env^)

@@ -112,23 +112,8 @@
              (evalo code res store)))
          `(,(jnum 4)))
 
-  (test= "Object packing/unpacking 2"
-         (map humanize (run* (res)
-                         (fresh (code store)
-                           (parseo/readable
-                             '(call (function ()
-                                              (var (compute (function (n) (return (op + n 1))))
-                                                   (obj (object ("0" (call compute 3))
-                                                                ("1" (call compute 4)))))
-                                              (return obj)))
-                             code)
-                           (evalo (jderef code) res store))))
-         '((object
-             (("private" object ())
-              ("public" object (("1" . 5) ("0" . 4)))))))
-
   ;; TODO:
-  (test= "Object packing/unpacking 3"
+  (test= "Object packing/unpacking 2"
          (run* (store res)
            (fresh (code)
              (parseo/readable

@@ -83,8 +83,7 @@
                                     next-address^ next-address~
                                     (== value (jref next-address^))
                                     (appendo store^ `(,store-value^) store~)
-                                    (incremento next-address^ next-address~)
-                                    )))
+                                    (incremento next-address^ next-address~))))
          ((fresh (addr-exp addr value^) ;; Fetch from memory
                  (== exp (jderef addr-exp))
                  (eval-envo addr-exp env value^ store store~ next-address next-address~)
@@ -93,9 +92,9 @@
                                     next-address~ next-address~
                                     (== value^ (jref addr))
                                     (indexo store~ addr value))))
-         ((fresh (var val addr val^ store^ value^) ;; Assign to memory address
-                 (== exp (jassign var val))
-                 (eval-env-listo `(,var ,val) env value^ store store^ next-address next-address~)
+         ((fresh (addr-exp val addr val^ store^ value^) ;; Assign to memory address
+                 (== exp (jassign addr-exp val))
+                 (eval-env-listo `(,addr-exp ,val) env value^ store store^ next-address next-address~)
                  (effect-propagateo value^ value
                                     store^ store~
                                     next-address~ next-address~
@@ -139,21 +138,21 @@
                  (eval-envo try-exp env try-value store store^ next-address next-address^)
                  (conde ((== try-value (jbrk label^ break-value)) ;; Break does not match label
                          (== `(,value ,store~ ,next-address~) `(,try-value ,store^ ,next-address^))
-                         (=/= label^ label)
-                         )
+                         (=/= label^ label))
                         ((== try-value `(,first . ,rest)) ;; No break was caught
                          (== `(,value ,store~ ,next-address~) `(,try-value ,store^ ,next-address^))
-                         (=/= first `break)
-                         )
+                         (=/= first `break))
                         ((== try-value (jbrk label break-value)) ;; Exception was caught
                          (appendo env `((,catch-var . ,break-value)) env^)
                          (eval-envo catch-exp env^ value store^ store~ next-address^ next-address~)))))
          ((jdeltao env exp value store store~ next-address next-address~))
          ((fresh (label val val^) ;; Throw
                  (== exp (jthrow label val))
-                 (== value (jbrk label val^))
                  (eval-envo val env val^ store store~ next-address next-address~)
-                 ))
+                 (effect-propagateo val^ value
+                                    store~ store~
+                                    next-address~ next-address~
+                                    (== value (jbrk label val^)))))
          ))
 
 (define (jdeltao env exp value store store~ next-address next-address~)
