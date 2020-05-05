@@ -102,24 +102,46 @@
                             (evalo code res store)))
          `(,(jnum 55)))
 
-  ;; TODO: debug allocation issue (possibly due to next-address corruption)
-  (test= "Object packing/unpacking"
+  (test= "Object packing/unpacking 1"
+         (run* (res)
+           (fresh (code store)
+             (parseo/readable
+               '(call (function () (return (@ (object ("0" (op + 3 1))
+                                                      ("1" (op + 4 1))) "0"))))
+               code)
+             (evalo code res store)))
+         `(,(jnum 4)))
+
+  (test= "Object packing/unpacking 2"
          (map humanize (run* (res)
-                             (fresh (code store)
-                                    (parseo/readable
-                                     '(call (function ()
-                                                      ;(return (@ (object ("0" (op + 3 1))
-                                                      ;                   ("1" (op + 4 1))) "0"))
-                                                      (var (compute (function (n) (op + n 1)))
-                                                           (obj (object ("0" (call compute 3))
-                                                                        ("1" (call compute 4)))))
-                                                      (return obj)
-                                                      ;(return (@ (object ("0" (call compute 3))
-                                                      ;("1" (call compute 4))) "0"))
-                                                      ))
-                                     code)
-                                    (evalo (jderef code) res store))))
+                         (fresh (code store)
+                           (parseo/readable
+                             '(call (function ()
+                                              (var (compute (function (n) (return (op + n 1))))
+                                                   (obj (object ("0" (call compute 3))
+                                                                ("1" (call compute 4)))))
+                                              (return obj)))
+                             code)
+                           (evalo (jderef code) res store))))
          '((object
-            (("private" object ())
-             ("public" object (("1" undefined) ("0" undefined)))))))
-  )
+             (("private" object ())
+              ("public" object (("1" . 5) ("0" . 4)))))))
+
+  ;; TODO:
+  (test= "Object packing/unpacking 3"
+         (run* (store res)
+           (fresh (code)
+             (parseo/readable
+               '(call (function ()
+                                (var (compute (function (n) (return (op + n 1)))))
+                                ;(return (call compute 4))
+                                (var (result (call compute 4)))
+                                ;(var (result 8))
+                                (return result)
+                                ;(return 7)
+                                ))
+               code)
+             (evalo code res store)
+             ))
+         'something)
+)
