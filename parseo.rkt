@@ -51,7 +51,7 @@
                  (== exp `(while ,cond . ,body))
                  (== jexp (jcatch `break (jwhile cond^ body^^) `e (jundef)))
                  (parse-exp-envo cond cond^ env)
-                 (parse-envo body body^ env)
+                 (parse-env-listo body body^ env)
                  (begino body^ body^^)))))
 
 (define (parse-exp-envo exp jexp env)
@@ -77,7 +77,7 @@
            ))
    ((fresh (var val var^ val^) ;; Assignment
            (== exp `(:= ,var ,val))
-           (conde ((symbolo var) (== jexp (jassign (jvar exp) val^)))
+           (conde ((symbolo var) (== jexp (jassign (jvar var) val^)))
                   ((fresh (obj obj^ key key^ obj-parsed temp-var)
                           (== var `(@ ,obj ,key))
                           (== obj-parsed (jvar obj))
@@ -107,8 +107,9 @@
   (fresh (init init^ cond cond^ inc inc^ body body^ body^^)
          (== exp `(for (,init ,cond ,inc) . ,body))
          (== jexp (jbeg init^ (jcatch `break (jwhile cond^ (jbeg body^^ inc^)) `e (jundef))))
-         (parse-exp-env-listo `(,cond . ,inc) `(,cond^ . ,inc^) env)
-         (parse-env-listo `(,init . ,body) `(,init^ . ,body^) env)
+         (parse-exp-env-listo `(,cond ,inc) `(,cond^ ,inc^) env)
+         (parse-envo init init^ env)
+         (parse-env-listo body body^ env)
          (begino body^ body^^)
          ))
 
