@@ -101,4 +101,23 @@
                          code)
                        (evalo code res store)))
          `(,(jnum 55)))
+
+  ;; TODO: debug allocation issue (possibly due to next-address corruption)
+  (test= "Object packing/unpacking"
+         (run* (res)
+           (fresh (code store)
+             (parseo/readable
+               '(call (function ()
+                                (return (@ (object ("0" (op + 3 1))
+                                                   ("1" (op + 4 1))) "0"))
+                                ;(var (compute (function (n) (op + n 1))))
+                                ;;(return (object ("0" (call compute 3))
+                                                ;;("1" (call compute 4))))
+                                ;(return (@ (object ("0" (call compute 3))
+                                                   ;("1" (call compute 4))) "0"))
+                                ))
+               code)
+             (evalo code res store)))
+         'something)
+
   )
