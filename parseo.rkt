@@ -30,21 +30,21 @@
          ((fresh (val)  ;; break
                  (== exp  `(break))
                  (== jexp (jthrow `break (jundef)))))
-         ((fresh (try-exp catch-exp try-exp^ catch-exp^ label env^) ;; Try/catch
-                 (== exp `(try ,try-exp catch ,label ,catch-exp))
-                 (== jexp (jbeg (jcatch `error try-exp^ label
-                                  (jlet label (jall (jvar label)) catch-exp^)) (jundef)))
-                 (== env^ `(,label . ,env))
+         ((fresh (try-exp catch-exp try-exp^ catch-exp^ catch-var env^) ;; Try/catch
+                 (== exp `(try ,try-exp catch ,catch-var ,catch-exp))
+                 (== jexp (jbeg (jcatch `error try-exp^ catch-var
+                                  (jlet catch-var (jall (jvar catch-var)) catch-exp^)) (jundef)))
+                 (== env^ `(,catch-var . ,env))
                  (parse-env-listo `(,try-exp ,catch-exp) `(,try-exp^ ,catch-exp^) env^)))
          ((fresh (try-exp try-exp^  finally-exp finally-exp^) ;; Try/finally
                  (== exp `(try ,try-exp finally ,finally-exp))
                  (== jexp (jfin try-exp^ (jbeg finally-exp^ (jundef))))
                  (parse-env-listo `(,try-exp ,finally-exp) `(,try-exp^ ,finally-exp^) env)
                  ))
-         ((fresh (try-exp catch-exp try-exp^ catch-exp^ finally-exp finally-exp^ label env^) ;; Try/catch/finally
-                 (== exp `(try ,try-exp catch ,label ,catch-exp finally ,finally-exp))
-                 (== jexp (jbeg (jcatch `error try-exp^ label catch-exp^) (jbeg finally-exp^ (jundef))))
-                 (== env^ `(,label . ,env))
+         ((fresh (try-exp catch-exp try-exp^ catch-exp^ finally-exp finally-exp^ catch-var env^) ;; Try/catch/finally
+                 (== exp `(try ,try-exp catch ,catch-var ,catch-exp finally ,finally-exp))
+                 (== jexp (jbeg (jcatch `error try-exp^ catch-var catch-exp^) (jbeg finally-exp^ (jundef))))
+                 (== env^ `(,catch-var . ,env))
                  (parse-env-listo `(,try-exp ,catch-exp ,finally-exp) `(,try-exp^ ,catch-exp^ ,finally-exp^) env^)))
          ((fresh (cond body cond^ body^ body^^) ;; while statements
                  (== exp `(while ,cond . ,body))
@@ -225,11 +225,11 @@
                             ((== exp `(throw ,x)))
                             ((hoist-var-expo exp `())))))
          ((fresh (x) (== exp `(var . ,x)) (hoist-nameso x vars)))
-         ((fresh (try-exp catch-exp label)
-                 (== exp `(try ,try-exp catch ,label ,catch-exp))
+         ((fresh (try-exp catch-exp catch-var)
+                 (== exp `(try ,try-exp catch ,catch-var ,catch-exp))
                  (hoist-var-listo `(,try-exp ,catch-exp) vars)))
-         ((fresh (try-exp catch-exp finally-exp label)
-                 (== exp `(try ,try-exp catch ,label ,catch-exp finally ,finally-exp))
+         ((fresh (try-exp catch-exp finally-exp catch-var)
+                 (== exp `(try ,try-exp catch ,catch-var ,catch-exp finally ,finally-exp))
                  (hoist-var-listo `(,try-exp ,catch-exp ,finally-exp) vars)))
          ((fresh (cond then else)
                  (== exp `(if ,cond ,then ,else))
