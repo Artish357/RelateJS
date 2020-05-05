@@ -67,12 +67,13 @@
          (run 1 (a b) (fresh (code inside i obj store public)
                              (parseo/readable `(call (function ()
                                                         (var (fib (function (x)
-                                                                            (switch x
-                                                                                    (1 (return ,a))
-                                                                                    (2 (return ,b)))
-                                                                            (return (op +
-                                                                                        (call fib (op - x 1))
-                                                                                        (call fib (op - x 2)))))))
+                                                                            (if (op === x 1)
+                                                                              (return ,a)
+                                                                              (if (op === x 2)
+                                                                                (return ,b)
+                                                                                (return (op +
+                                                                                            (call fib (op - x 1))
+                                                                                            (call fib (op - x 2)))))))))
                                                         (if (op === (call fib 3) 1)
                                                             (if (op === (call fib 4) 2)
                                                                 (if (op === (call fib 5) 3)
