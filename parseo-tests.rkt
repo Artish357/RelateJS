@@ -34,6 +34,26 @@
   (test= "Human interface functions"
          (humanize (dehumanize (list 1 "hello" 1337)))
          (list 1 "hello" 1337))
+  (test= "Alpha equivalence 1"
+         (run* (res)
+           (fresh (code store)
+             (parseo/readable
+               '(call (function ()
+                                (var (a 1) (b 2))
+                                (return (call (function (b) (return b)) a))))
+               code)
+             (evalo code res store)))
+         `(,(jnum 1)))
+  (test= "Alpha equivalence 2"
+         (run* (res)
+           (fresh (code store)
+             (parseo/readable
+               '(call (function ()
+                                (var (a 1) (b 2))
+                                (return (call (function (a) (return a)) a))))
+               code)
+             (evalo code res store)))
+         `(,(jnum 1)))
   (let ([f! (lambda (x) `(call (function () (var (f! (function (x) (if (op === x 1) (return 1) (return (op * x (call f! (op - x 1)))))))) (return (call f! ,x)))))])
     (test= "Factorial of 4" (run* (r) (fresh (code store) (parseo/readable (f! 4) code) (evalo code r store))) (list (dehumanize 24)))
     (test= "Factorial of 5" (run* (r) (fresh (code store) (parseo/readable (f! 5) code) (evalo code r store))) (list (dehumanize 120)))
