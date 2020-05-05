@@ -58,4 +58,27 @@
                                                                       )) code)
                                            (evalo code res store)))
          `(,(jbool #t)))
+  (test= "While loop sum"
+         (run* (res) (fresh (code store)
+                       (parseo/readable
+                         '(call (function ()
+                                          (var (total 0) (i 0))
+                                          (while (op < i 11)
+                                                 (:= total (op + total i))
+                                                 (:= i (op + i 1)))
+                                          (return total)))
+                         code)
+                       (evalo code res store)))
+         `(,(jnum 55)))
+  (test= "For loop sum"
+         (run* (res) (fresh (code store)
+                       (parseo/readable
+                         '(call (function ()
+                                          (var (total 0))
+                                          (for ((var (i 0)) (op < i 11) (:= i (op + i 1)))
+                                            (:= total (op + total i)))
+                                          (return total)))
+                         code)
+                       (evalo code res store)))
+         `(,(jnum 55)))
   )
