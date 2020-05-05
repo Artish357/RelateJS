@@ -65,24 +65,24 @@
                                     (updateo bindings key^ val^ bindings^))))
          ((fresh (obj-exp bindings bindings^ key key^ store^ next-address^ value^) ;; Delete field
                  (== exp (jdel obj-exp key))
-                 (eval-env-listo `(,obj-exp ,key) env value^ store store~ next-address next-address~)
+                 (eval-env-listo `(,obj-exp ,key) env value^ store store^ next-address next-address^)
                  (effect-propagateo value^ value
-                                    store~ store~
-                                    next-address~ next-address~
+                                    store^ store~
+                                    next-address^ next-address~
                                     (== value^ (value-list `(,(jobj bindings) ,key^)))
                                     (== value (jobj bindings^))
                                     (typeofo key^ (jstr "string") store~)
                                     (deleto bindings key^ bindings^)
                                     (eval-envo key env key^ store^ store~ next-address^ next-address~)
                                     )))
-         ((fresh (ref ref^ next-address^ store^) ;; Allocate memory
-                 (== exp (jall ref))
-                 (eval-envo ref env ref^ store store^ next-address next-address^)
-                 (effect-propagateo ref^ value
+         ((fresh (store-value store-value^ next-address^ store^) ;; Allocate memory
+                 (== exp (jall store-value))
+                 (eval-envo store-value env store-value^ store store^ next-address next-address^)
+                 (effect-propagateo store-value^ value
                                     store^ store~
                                     next-address^ next-address~
-                                    (== value (jref next-address))
-                                    (appendo store^ `(,ref^) store~)
+                                    (== value (jref next-address^))
+                                    (appendo store^ `(,store-value^) store~)
                                     (incremento next-address^ next-address~)
                                     )))
          ((fresh (addr-exp addr value^) ;; Fetch from memory
@@ -129,7 +129,7 @@
          ((fresh (try-exp finally-exp try-value finally-value store^ next-address^) ;; Finally
                  (== exp (jfin try-exp finally-exp))
                  (eval-envo try-exp env try-value store store^ next-address next-address^)
-                 (eval-envo finally-exp env finally-value store^ store~ next-address next-address~)
+                 (eval-envo finally-exp env finally-value store^ store~ next-address^ next-address~)
                  (effect-propagateo finally-value value
                                     store~ store~
                                     next-address~ next-address~
