@@ -145,9 +145,7 @@
          ((fresh (obj obj^ val val^)
                  (== exp `(@ ,obj ,val))
                  (== jexp (jget (jget obj^ (jstr "public")) val^))
-                 (parse-exp-env-listo `(,obj ,val) `(,obj^ ,val^) env)
-                 ))))
-
+                 (parse-exp-env-listo `(,obj ,val) `(,obj^ ,val^) env)))))
 
 (define (objecto exp jexp env)
   (fresh (pairs public)
@@ -175,17 +173,21 @@
                  ))))
 
 (define (functiono exp jexp env)
-  (fresh (params body body^ body^^ body^^^ body^^^^ vars vars^ payload env^ env^^)
+  (fresh (params body body^ body^^ body^^^ body^^^^ vars vars^ payload env^ env^^ return-var)
          (== exp `(function ,params . ,body))
          (== jexp (jall (jset (jobj `((,(jstr "public") . ,(jobj `()))))
                               (jstr "private")
-                              (jset (jobj `()) (jstr "call") (jfun params
-                                                                   (jcatch `return (jbeg body^^^^ (jundef)) `result (jvar `result)))))))
+                              (jset (jobj `()) (jstr "call")
+                                    (jfun params
+                                          (jcatch `return (jbeg body^^^^ (jundef))
+                                                  return-var (jvar return-var)))))))
          (hoist-var-listo body vars)
          (differenceo vars params vars^)
          (appendo vars^ env env^)
          (appendo params env^ env^^)
-         (parse-env-listo body body^ env^^)
+         ; To avoid collisions
+         (not-in-listo return-var env^^)
+         (parse-env-listo body body^ `(,return-var . ,env^^))
          (begino body^ body^^)
          (allocato vars^ body^^ body^^^)
          (assigno params body^^^ body^^^^)
