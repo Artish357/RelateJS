@@ -3,7 +3,7 @@
 (provide jlet jfun jclo japp jget jset jdel jvar jrawnum jnum
          jobj jref jderef jassign jall jbeg jbool
          jif jundef jnul jwhile jbrk jthrow jfin jcatch
-         value-list jdelta jrawstr jstr jnul)
+         jdelta jrawstr jstr jnul)
 
 (define (jlet key value exp)
   `(let ,key ,value ,exp))
@@ -79,9 +79,6 @@
 
 (define (jcatch label try-exp catch-var catch-exp)
   `(catch ,label ,try-exp ,catch-var ,catch-exp))
-
-(define (value-list values)
-  (cons `value-list values))
 
 (define (jrawstr str)
   `(string ,str))

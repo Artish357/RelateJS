@@ -225,13 +225,44 @@
                      ((== rator `string-<)
                       (string-lesso chars1 chars2 value)))))))))))
 
+;; Sequentially evaluate a list of LambdaJS expressions
+(define (eval-env-listo exprs env vals store store~ next-address next-address~)
+  (conde
+    ; base case: empty list of expressions
+    ((== exprs `())
+     (== vals (value-list `()))
+     (== store store~)
+     (== next-address next-address~))
+    ; non-empty list of expressions
+    ((fresh (expr expr-rest val val-rest val-rest-payload store^ next-address^)
+       (== exprs `(,expr . ,expr-rest))
+       (eval-envo expr env val store store^ next-address next-address^)
+       (effect-propagateo val vals store^ store~ next-address^ next-address~
+         (eval-env-listo expr-rest env val-rest store^ store~ next-address^ next-address~)
+         (effect-propagateo val-rest vals store~ store~ next-address~ next-address~
+           (== val-rest (value-list val-rest-payload))
+           (== vals (value-list `(,val . ,val-rest-payload)))))))))
+
+; For propagating control effects (Section 2.2.6)
+(define-syntax-rule (effect-propagateo value^        value~
+                                       store^        store~
+                                       next-address^ next-address~
+                                       cont ...)
+  (fresh (label bval tag rest)
+    (conde ((== (jbrk label bval) value^)
+            (== `(,value~ ,store~ ,next-address~)
+                `(,value^ ,store^ ,next-address^)))
+           ((== `(,tag . ,rest) value^)
+            (=/= tag `break)
+            cont ...))))
+
 (define (typeofo value type store)
   (fresh (temp)
     (conde ((== value (jundef))
             (== type (jstr "undefined")))
            ((== value (jnul))
             (== type (jstr "object")))
-           ((== value `(string . ,temp)) ;; For all of these, the prefix/tags are hardcoded
+           ((== value `(string . ,temp))
             (== type (jstr "string")))
            ((== value  `(number . ,temp))
             (== type (jstr "number")))
@@ -250,38 +281,24 @@
 
 (define (string-lesso s1 s2 value)
   (fresh (x x^ y y^ rest)
-         (conde ((== s1 `()) (== s2 `(,x . ,rest)) (== value (jbool #t)))
-                ((== s2 `()) (== value (jbool #f)))
-                ((== s1 `(,x . ,x^)) (== s2 `(,x . ,y^)) (string-lesso x^ y^ value))
-                ((== s1 `(,x . ,x^)) (== s2 `(,y . ,y^)) (== value (jbool #t)) (=/= x y) (<o x y))
-                ((== s1 `(,x . ,x^)) (== s2 `(,y . ,y^)) (== value (jbool #f)) (=/= x y) (<=o y x)))))
-
-(define-syntax-rule (effect-propagateo value^        value~
-                                       store^        store~
-                                       next-address^ next-address~
-                                       cont ...)
-  (fresh (label bval tag rest)
-    (conde ((== (jbrk label bval) value^)
-            (== `(,value~ ,store~ ,next-address~) `(,value^ ,store^ ,next-address^)))
-           ((== `(,tag . ,rest) value^)
-            (=/= tag `break)
-            cont ...))))
-
-(define (eval-env-listo elist env vlist store store~ next-address next-address~)
-  (conde ((== elist `()) (== vlist (value-list `())) (== store store~) (== next-address next-address~))
-         ((fresh (expr expr-rest val value-rest value-rest^ store^ next-address^)
-                 (== elist `(,expr . ,expr-rest))
-                 (eval-envo expr env val store store^ next-address next-address^)
-                 (effect-propagateo val vlist
-                                    store^ store~
-                                    next-address^ next-address~
-                                    (eval-env-listo expr-rest env value-rest store^ store~ next-address^ next-address~)
-                                    (effect-propagateo value-rest vlist
-                                                       store~ store~
-                                                       next-address~ next-address~
-                                                       (== value-rest (value-list value-rest^))
-                                                       (== vlist (value-list `(,val . ,value-rest^)))))))))
-
+    (conde ((== s1 `())
+            (== s2 `(,x . ,rest))
+            (== value (jbool #t)))
+           ((== s2 `())
+            (== value (jbool #f)))
+           ((== s1 `(,x . ,x^))
+            (== s2 `(,x . ,y^))
+            (string-lesso x^ y^ value))
+           ((== s1 `(,x . ,x^))
+            (== s2 `(,y . ,y^))
+            (== value (jbool #t))
+            (=/= x y)
+            (<o x y))
+           ((== s1 `(,x . ,x^))
+            (== s2 `(,y . ,y^))
+            (== value (jbool #f))
+            (=/= x y)
+            (<=o y x)))))
 
 (define (jnumbero expr)
   (fresh (val) (== expr `(number ,val))))
@@ -294,3 +311,7 @@
 
 (define (boolo expr)
   (fresh (b) (== expr (jbool b))))
+
+(define (value-list values)
+  (cons `value-list values))
+
