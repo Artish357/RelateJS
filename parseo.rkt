@@ -25,13 +25,18 @@
        (parse-env-listo stmts jexprs env)
        (begino jexprs jexpr-begin)))
     ; if statement 
-    ((fresh (cond then else cond^ then^ else^) ;; if statements
-                 (== stmt `(if ,cond ,then ,else))
-                 (== jexpr (jbeg (jif cond^ then^ else^) (jundef)))
-                 (parse-exp-envo cond cond^ env)
-                 (parse-env-listo `(,then ,else) `(,then^ ,else^) env)))
+    ((fresh (cond-expr then-stmt else-stmt jexpr-cond jexpr-then jexpr-else)
+       (== stmt `(if ,cond-expr ,then-stmt ,else-stmt))
+       (== jexpr (jbeg (jif jexpr-cond jexpr-then jexpr-else) (jundef)))
+       (parse-exp-envo cond-expr jexpr-cond env)
+       (parse-env-listo `(,then-stmt ,else-stmt)
+                        `(,jexpr-then ,jexpr-else)
+                        env)))
+
+
          ((varo stmt jexpr env)) ;; Var
          ((parse-foro stmt jexpr env))
+
          ;; different breaks
          ((fresh (val val^)  ;; return
                  (== stmt `(return ,val))
