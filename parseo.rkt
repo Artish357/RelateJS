@@ -1,6 +1,6 @@
 #lang racket
 (require "js-structures.rkt" "faster-miniKanren/mk.rkt" "evalo.rkt" "helpers.rkt")
-(provide hoist-varo hoist-var-listo hoist-pairso humanize dehumanize parseo/readable parseo)
+(provide hoist-varo humanize dehumanize parseo/readable parseo)
 
 ; Parse a JavaScript statement with human-readable literals
 (define (parseo/readable stmt jexpr)
