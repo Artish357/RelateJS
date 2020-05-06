@@ -13,15 +13,19 @@
          (allocato vars body jexpr)
          (parse-envo stmt body vars)))
 
-; Parse a JavaScript statement to LamdaJs expression
+; Parse a JavaScript statement to LambdaJS expression passing the env
 (define (parse-envo stmt jexpr env)
-  (conde ((parse-exp-envo stmt jexpr env)) ;; Expressions
-         ((fresh (exps exps^ jexpr^) ;; Begin
-                 (== stmt `(begin . ,exps))
-                 (== jexpr (jbeg jexpr^ (jundef)))
-                 (parse-env-listo exps exps^ env)
-                 (begino exps^ jexpr^)))
-         ((fresh (cond then else cond^ then^ else^) ;; if statements
+  (conde
+    ; expressions have a helper for their own
+    ((parse-exp-envo stmt jexpr env))
+    ; begin statement (Section 3.2.7)
+    ((fresh (stmts jexprs jexpr-begin)
+       (== stmt `(begin . ,stmts))
+       (== jexpr (jbeg jexpr-begin (jundef)))
+       (parse-env-listo stmts jexprs env)
+       (begino jexprs jexpr-begin)))
+    ; if statement 
+    ((fresh (cond then else cond^ then^ else^) ;; if statements
                  (== stmt `(if ,cond ,then ,else))
                  (== jexpr (jbeg (jif cond^ then^ else^) (jundef)))
                  (parse-exp-envo cond cond^ env)
