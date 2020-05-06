@@ -42,7 +42,7 @@
            (updateo obj k v obj^)
            (update-objecto obj^ krest vrest result)))))
 
-(define (deleto obj key result)
+(define (deleteo obj key result)
   (conde ((== obj `()) (== result `()))
          ((fresh (orest rrest k v)
                  (== obj `((,k . ,v) . ,orest))
@@ -50,7 +50,7 @@
                          (== orest result))
                         ((== result `((,k . ,v) . ,rrest))
                          (=/= k key)
-                         (deleto orest key rrest)))
+                         (deleteo orest key rrest)))
                  ))))
 
 (define (appendo s t r)

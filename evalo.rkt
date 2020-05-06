@@ -2,78 +2,89 @@
 (require "faster-miniKanren/mk.rkt" "js-structures.rkt" "faster-miniKanren/numbers.rkt" "helpers.rkt")
 (provide evalo eval-envo)
 
+;; Entry point for the LambdaJS interpreter
 (define (evalo exp val store)
-  (fresh (next-address^) (eval-envo exp `() val `() store `() next-address^)))
+  (fresh (next-address^)
+         (eval-envo exp `() val `() store `() next-address^)))
 
-(define (eval-envo exp env value store store~ next-address next-address~)
-  (conde ((== exp value)
-          (== store store~)
-          (== next-address next-address~)
-          (conde ((jnumbero exp)) ((objecto exp)) ((boolo exp)) ((jstro exp))
-                 ((== exp (jundef))) ((== exp (jnul)))) ;; Values
-          )
-         ((fresh (var val val^ body let-env store^ next-address^) ;; Let
-                 (== exp (jlet var val body))
-                 (eval-envo val env val^ store store^ next-address next-address^)
-                 (effect-propagateo val^ value
-                                    store^ store~
-                                    next-address^ next-address~
-                                    (== let-env `((,var . ,val^) . ,env))
-                                    (eval-envo body let-env value store^ store~ next-address^ next-address~))))
-         ((fresh (var) ;; Look up a variable
-                 (== exp (jvar var))
-                 (== store store~)
-                 (== next-address next-address~)
-                 (lookupo var env value)))
-         ((fresh (body params) ;; Function creation
-                 (== exp (jfun params body))
-                 (== value (jclo params body env))
-                 (== store store~)
-                 (== next-address next-address~)))
-         ((fresh (func params args args-eval body cenv cenv^ zipped value^ store^ next-address^) ;; Function application
-                 (== exp (japp func args))
-                 (eval-env-listo `(,func . ,args) env value^ store store^ next-address next-address^)
-                 (effect-propagateo value^ value
-                                    store^ store~
-                                    next-address^ next-address~
-                                    (== value^ (value-list `(,(jclo params body cenv) . ,args-eval)))
-                                    (zipo zipped params args-eval)
-                                    (appendo zipped cenv cenv^)
-                                    (eval-envo body cenv^ value store^ store~ next-address^ next-address~))))
-         ((fresh (obj-exp bindings key key^ value^) ;; Get
-                 (== exp (jget obj-exp key))
-                 (eval-env-listo `(,key ,obj-exp) env value^ store store~ next-address next-address~)
-                 (effect-propagateo value^ value
-                                    store~ store~
-                                    next-address~ next-address~
-                                    (== value^ (value-list `(,key^ ,(jobj bindings))))
-                                    (typeofo key^ (jstr "string") store~)
-                                    (conde ((membero `(,key^ . ,value) bindings)) ;; found
-                                           ((== value (jundef))
-                                            (absent-keyso key^ bindings) ;; not found
-                                            )))))
-         ((fresh (obj-exp bindings bindings^ key key^ val val^ v value^) ;; Create/update field
-                 (== exp (jset obj-exp key val))
-                 (eval-env-listo `(,obj-exp ,key ,val) env value^ store store~ next-address next-address~)
-                 (effect-propagateo value^ value
-                                    store~ store~
-                                    next-address~ next-address~
-                                    (== value^ (value-list `(,(jobj bindings) ,key^ ,val^)))
-                                    (== value (jobj bindings^))
-                                    (typeofo key^ (jstr "string") store~)
-                                    (updateo bindings key^ val^ bindings^))))
-         ((fresh (obj-exp bindings bindings^ key key^ store^ next-address^ value^) ;; Delete field
-                 (== exp (jdel obj-exp key))
-                 (eval-env-listo `(,obj-exp ,key) env value^ store store^ next-address next-address^)
-                 (effect-propagateo value^ value
-                                    store^ store~
-                                    next-address^ next-address~
-                                    (== value^ (value-list `(,(jobj bindings) ,key^)))
-                                    (== value (jobj bindings^))
-                                    (typeofo key^ (jstr "string") store~)
-                                    (deleto bindings key^ bindings^)
-                                    (eval-envo key env key^ store^ store~ next-address^ next-address~))))
-         ((fresh (store-value store-value^ next-address^ store^) ;; Allocate memory
+;; LambdaJS interpreter with store
+(define (eval-envo exp env value
+                   store store~                ; mutable store before/after
+                   next-address next-address~) ; index counter for the store
+  (conde
+    ;; Atomic values (Section 2.2.1)
+    ((== exp value)
+     (== store store~)
+     (== next-address next-address~)
+     (conde ((jnumbero exp)) ((objecto exp)) ((boolo exp)) ((jstro exp))
+            ((== exp (jundef))) ((== exp (jnul)))))
+    ;; Let expressions (Section 2.2.2)
+    ((fresh (lhs-var          ; variable being bound
+             rhs-expr rhs-val ; right-hand side expression & value
+             store^ next-address^ ; store produced by evaluating the rhs
+             body
+             let-env)         ; environment after the let binding
+       (== exp (jlet lhs-var rhs-expr body))
+       (eval-envo rhs-expr env rhs-val store store^ next-address next-address^)
+       (effect-propagateo rhs-val value store^ store~ next-address^ next-address~
+         (== let-env `((,lhs-var . ,rhs-val) . ,env))
+         (eval-envo body let-env value store^ store~ next-address^ next-address~))))
+    ;; Immutable variable lookup (Section 2.2.2)
+    ((fresh (var) ;; Look up a variable
+       (== exp (jvar var))
+       (== store store~)
+       (== next-address next-address~)
+       (lookupo var env value)))
+    ;; Function definition (Section 2.2.4)
+    ((fresh (body params)
+       (== exp (jfun params body))
+       (== value (jclo params body env))
+       (== store store~)
+       (== next-address next-address~)))
+    ;; Function application (Section 2.2.4)
+    ((fresh (func params rands args body
+             param-arg-bindings
+             cenv cenv^ ; closure environment before/after adding param-arg-bindings
+             value^ store^ next-address^)
+       (== exp (japp func rands))
+       (eval-env-listo `(,func . ,rands) env value^ store store^ next-address next-address^)
+       (effect-propagateo value^ value store^ store~ next-address^ next-address~
+         (== value^ (value-list `(,(jclo params body cenv) . ,args)))
+         (zipo param-arg-bindings params args)
+         (appendo param-arg-bindings cenv cenv^)
+         (eval-envo body cenv^ value store^ store~ next-address^ next-address~))))
+    ;; Object field retrieval (2.2.4)
+    ((fresh (obj-exp obj-bindings key-expr key-val value^)
+       (== exp (jget obj-exp key-expr))
+       (eval-env-listo `(,key-expr ,obj-exp) env value^ store store~ next-address next-address~)
+       (effect-propagateo value^ value store~ store~ next-address~ next-address~
+         (== value^ (value-list `(,key-val ,(jobj obj-bindings))))
+         (typeofo key-val (jstr "string") store~)
+         (conde ((membero `(,key-val . ,value) obj-bindings)) ; found
+                ((== value (jundef))                          ; not found
+                 (absent-keyso key-val obj-bindings))))))
+    ;; Object field create/update (2.2.4)
+    ((fresh (obj-exp obj-bindings obj-bindings^
+             key-expr key-val rhs-expr rhs-val value^)
+       (== exp (jset obj-exp key-expr rhs-expr))
+       (eval-env-listo `(,obj-exp ,key-expr,rhs-expr) env value^ store store~ next-address next-address~)
+       (effect-propagateo value^ value store~ store~ next-address~ next-address~
+         (== value^ (value-list `(,(jobj obj-bindings) ,key-val ,rhs-val)))
+         (== value (jobj obj-bindings^))
+         (typeofo key-val (jstr "string") store~)
+         (updateo obj-bindings key-val rhs-val obj-bindings^))))
+    ;; Object field delete (Section 2.2.4)
+    ((fresh (obj-exp obj-bindings obj-bindings^
+             key-expr key-val value^)
+       (== exp (jdel obj-exp key-expr))
+       (eval-env-listo `(,obj-exp ,key-expr) env value^ store store~ next-address next-address~)
+       (effect-propagateo value^ value store~ store~ next-address~ next-address~
+         (== value^ (value-list `(,(jobj obj-bindings) ,key-val)))
+         (== value (jobj obj-bindings^))
+         (typeofo key-val (jstr "string") store~)
+         (deleteo obj-bindings key-val obj-bindings^))))
+    ;; Mutable references: memory allocation (Section 2.2.3)
+    ((fresh (store-value store-value^ next-address^ store^)
                  (== exp (jall store-value))
                  (eval-envo store-value env store-value^ store store^ next-address next-address^)
                  (effect-propagateo store-value^ value
