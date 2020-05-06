@@ -12,20 +12,19 @@
           (conde ((jnumbero exp)) ((objecto exp)) ((boolo exp)) ((jstro exp))
                  ((== exp (jundef))) ((== exp (jnul)))) ;; Values
           )
-         ((fresh (k v v^ exp2 env2 store^ next-address^) ;; Let
-                 (== exp (jlet k v exp2))
-                 (eval-envo v env v^ store store^ next-address next-address^)
-                 (effect-propagateo v^ value
+         ((fresh (var val val^ body let-env store^ next-address^) ;; Let
+                 (== exp (jlet var val body))
+                 (eval-envo val env val^ store store^ next-address next-address^)
+                 (effect-propagateo val^ value
                                     store^ store~
                                     next-address^ next-address~
-                                    (== env2 `((,k . ,v^) . ,env))
-                                    (eval-envo exp2 env2 value store^ store~ next-address^ next-address~))))
+                                    (== let-env `((,var . ,val^) . ,env))
+                                    (eval-envo body let-env value store^ store~ next-address^ next-address~))))
          ((fresh (var) ;; Look up a variable
                  (== exp (jvar var))
                  (== store store~)
                  (== next-address next-address~)
-                 (lookupo var env value)
-                 ))
+                 (lookupo var env value)))
          ((fresh (body params) ;; Function creation
                  (== exp (jfun params body))
                  (== value (jclo params body env))
@@ -73,8 +72,7 @@
                                     (== value (jobj bindings^))
                                     (typeofo key^ (jstr "string") store~)
                                     (deleto bindings key^ bindings^)
-                                    (eval-envo key env key^ store^ store~ next-address^ next-address~)
-                                    )))
+                                    (eval-envo key env key^ store^ store~ next-address^ next-address~))))
          ((fresh (store-value store-value^ next-address^ store^) ;; Allocate memory
                  (== exp (jall store-value))
                  (eval-envo store-value env store-value^ store store^ next-address next-address^)
@@ -100,8 +98,7 @@
                                     next-address~ next-address~
                                     (== value^ (value-list `(,(jref addr) ,val^)))
                                     (== value val^)
-                                    (set-indexo store^ addr val^ store~)
-                                    )))
+                                    (set-indexo store^ addr val^ store~))))
          ((fresh (first second dummy value^) ;; Begin-discard
                  (== exp (jbeg first second))
                  (eval-env-listo `(,first ,second) env value^ store store~ next-address next-address~)
@@ -152,8 +149,7 @@
                  (effect-propagateo val^ value
                                     store~ store~
                                     next-address~ next-address~
-                                    (== value (jbrk label val^)))))
-         ))
+                                    (== value (jbrk label val^)))))))
 
 (define (jdeltao env exp value store store~ next-address next-address~)
   (fresh (func vals op1 op2 v1 v2 vals^ res rem value^)
