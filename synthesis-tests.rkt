@@ -24,7 +24,7 @@
   (test= "5 ways to say hello"
          (length (map humanize (run 5 (out store) (evalo out (jstr "Hello") store))))
          5)
-  (test= "3 ways to code hello"
+  #;(test= "3 ways to code hello"
          (length (run 3 (out) (fresh (code store) (parseo out code) (evalo code (jstr "Hello") store))))
          3)
   (test= "6 ways to break down hello"
