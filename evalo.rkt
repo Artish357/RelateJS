@@ -3,41 +3,41 @@
 (provide evalo eval-envo)
 
 ;; Entry point for the LambdaJS interpreter
-(define (evalo exp val store)
+(define (evalo expr val store)
   (fresh (next-address^)
-         (eval-envo exp `() val `() store `() next-address^)))
+         (eval-envo expr `() val `() store `() next-address^)))
 
 ;; LambdaJS interpreter with store
-(define (eval-envo exp env value
+(define (eval-envo expr env value
                    store store~                ; mutable store before/after
                    next-address next-address~) ; index counter for the store
   (conde
     ;; Atomic values (Section 2.2.1)
-    ((== exp value)
+    ((== expr value)
      (== store store~)
      (== next-address next-address~)
-     (conde ((jnumbero exp)) ((objecto exp)) ((boolo exp)) ((jstro exp))
-            ((== exp (jundef))) ((== exp (jnul)))))
+     (conde ((jnumbero expr)) ((objecto expr)) ((boolo expr)) ((jstro expr))
+            ((== expr (jundef))) ((== expr (jnul)))))
     ;; Let expressions (Section 2.2.2)
     ((fresh (lhs-var          ; variable being bound
              rhs-expr rhs-val ; right-hand side expression & value
              store^ next-address^ ; store produced by evaluating the rhs
              body
              let-env)         ; environment after the let binding
-       (== exp (jlet lhs-var rhs-expr body))
+       (== expr (jlet lhs-var rhs-expr body))
        (eval-envo rhs-expr env rhs-val store store^ next-address next-address^)
        (effect-propagateo rhs-val value store^ store~ next-address^ next-address~
          (== let-env `((,lhs-var . ,rhs-val) . ,env))
          (eval-envo body let-env value store^ store~ next-address^ next-address~))))
     ;; Immutable variable lookup (Section 2.2.2)
     ((fresh (var) ;; Look up a variable
-       (== exp (jvar var))
+       (== expr (jvar var))
        (== store store~)
        (== next-address next-address~)
        (lookupo var env value)))
     ;; Function definition (Section 2.2.4)
     ((fresh (body params)
-       (== exp (jfun params body))
+       (== expr (jfun params body))
        (== value (jclo params body env))
        (== store store~)
        (== next-address next-address~)))
@@ -46,7 +46,7 @@
              param-arg-bindings
              cenv cenv^ ; closure environment before/after adding param-arg-bindings
              value^ store^ next-address^)
-       (== exp (japp func rands))
+       (== expr (japp func rands))
        (eval-env-listo `(,func . ,rands) env value^ store store^ next-address next-address^)
        (effect-propagateo value^ value store^ store~ next-address^ next-address~
          (== value^ (value-list `(,(jclo params body cenv) . ,args)))
@@ -54,9 +54,9 @@
          (appendo param-arg-bindings cenv cenv^)
          (eval-envo body cenv^ value store^ store~ next-address^ next-address~))))
     ;; Object field retrieval (2.2.4)
-    ((fresh (obj-exp obj-bindings key-expr key-val value^)
-       (== exp (jget obj-exp key-expr))
-       (eval-env-listo `(,key-expr ,obj-exp) env value^ store store~ next-address next-address~)
+    ((fresh (obj-expr obj-bindings key-expr key-val value^)
+       (== expr (jget obj-expr key-expr))
+       (eval-env-listo `(,key-expr ,obj-expr) env value^ store store~ next-address next-address~)
        (effect-propagateo value^ value store~ store~ next-address~ next-address~
          (== value^ (value-list `(,key-val ,(jobj obj-bindings))))
          (typeofo key-val (jstr "string") store~)
@@ -64,107 +64,110 @@
                 ((== value (jundef))                          ; not found
                  (absent-keyso key-val obj-bindings))))))
     ;; Object field create/update (2.2.4)
-    ((fresh (obj-exp obj-bindings obj-bindings^
+    ((fresh (obj-expr obj-bindings obj-bindings^
              key-expr key-val rhs-expr rhs-val value^)
-       (== exp (jset obj-exp key-expr rhs-expr))
-       (eval-env-listo `(,obj-exp ,key-expr,rhs-expr) env value^ store store~ next-address next-address~)
+       (== expr (jset obj-expr key-expr rhs-expr))
+       (eval-env-listo `(,obj-expr ,key-expr,rhs-expr) env value^ store store~ next-address next-address~)
        (effect-propagateo value^ value store~ store~ next-address~ next-address~
          (== value^ (value-list `(,(jobj obj-bindings) ,key-val ,rhs-val)))
          (== value (jobj obj-bindings^))
          (typeofo key-val (jstr "string") store~)
          (updateo obj-bindings key-val rhs-val obj-bindings^))))
     ;; Object field delete (Section 2.2.4)
-    ((fresh (obj-exp obj-bindings obj-bindings^
+    ((fresh (obj-expr obj-bindings obj-bindings^
              key-expr key-val value^)
-       (== exp (jdel obj-exp key-expr))
-       (eval-env-listo `(,obj-exp ,key-expr) env value^ store store~ next-address next-address~)
+       (== expr (jdel obj-expr key-expr))
+       (eval-env-listo `(,obj-expr ,key-expr) env value^ store store~ next-address next-address~)
        (effect-propagateo value^ value store~ store~ next-address~ next-address~
          (== value^ (value-list `(,(jobj obj-bindings) ,key-val)))
          (== value (jobj obj-bindings^))
          (typeofo key-val (jstr "string") store~)
          (deleteo obj-bindings key-val obj-bindings^))))
     ;; Mutable references: memory allocation (Section 2.2.3)
-    ((fresh (store-value store-value^ next-address^ store^)
-                 (== exp (jall store-value))
-                 (eval-envo store-value env store-value^ store store^ next-address next-address^)
-                 (effect-propagateo store-value^ value
-                                    store^ store~
-                                    next-address^ next-address~
-                                    (== value (jref next-address^))
-                                    (appendo store^ `(,store-value^) store~)
-                                    (incremento next-address^ next-address~))))
-         ((fresh (addr-exp addr value^) ;; Fetch from memory
-                 (== exp (jderef addr-exp))
-                 (eval-envo addr-exp env value^ store store~ next-address next-address~)
-                 (effect-propagateo value^ value
-                                    store~ store~
-                                    next-address~ next-address~
-                                    (== value^ (jref addr))
-                                    (indexo store~ addr value))))
-         ((fresh (addr-exp val addr val^ store^ value^) ;; Assign to memory address
-                 (== exp (jassign addr-exp val))
-                 (eval-env-listo `(,addr-exp ,val) env value^ store store^ next-address next-address~)
-                 (effect-propagateo value^ value
-                                    store^ store~
-                                    next-address~ next-address~
-                                    (== value^ (value-list `(,(jref addr) ,val^)))
-                                    (== value val^)
-                                    (set-indexo store^ addr val^ store~))))
-         ((fresh (first second dummy value^) ;; Begin-discard
-                 (== exp (jbeg first second))
-                 (eval-env-listo `(,first ,second) env value^ store store~ next-address next-address~)
-                 (effect-propagateo value^ value
-                                    store~ store~
-                                    next-address~ next-address~
-                                    (== value^ (value-list `(,dummy ,value))))))
-         ((fresh (cond cond^ then else store^ next-address^) ;; If statements
-                 (== exp (jif cond then else))
-                 (eval-envo cond env cond^ store store^ next-address next-address^)
-                 (effect-propagateo cond^ value
-                                    store^ store~
-                                    next-address^ next-address~
-                                    (conde ((== cond^ (jbool #f)) (eval-envo else env value store^ store~ next-address^ next-address~))
-                                           ((== cond^ (jbool #t)) (eval-envo then env value store^ store~ next-address^ next-address~))))))
-         ((fresh (cond body store^ next-address^ cond^) ;; While
-                 (== exp (jwhile cond body))
-                 (eval-envo cond env cond^ store store^ next-address next-address^)
-                 (effect-propagateo cond^ value
-                                    store^ store~
-                                    next-address^ next-address~
-                                    (conde ((== cond^ (jbool #f)) (== value (jundef)) (== store^ store~) (== next-address^ next-address~))
-                                           ((== cond^ (jbool #t)) (eval-envo (jbeg body (jwhile cond body)) env value store^ store~ next-address^ next-address~))))))
-         ((fresh (try-exp finally-exp try-value finally-value store^ next-address^) ;; Finally
-                 (== exp (jfin try-exp finally-exp))
-                 (eval-envo try-exp env try-value store store^ next-address next-address^)
-                 (eval-envo finally-exp env finally-value store^ store~ next-address^ next-address~)
-                 (effect-propagateo finally-value value
-                                    store~ store~
-                                    next-address~ next-address~
-                                    (== value try-value))))
-         ((fresh (label label^ try-exp catch-var catch-exp try-value store^ next-address^ env^ break-value first rest) ;; Catch
-                 (== exp (jcatch label try-exp catch-var catch-exp))
-                 (eval-envo try-exp env try-value store store^ next-address next-address^)
-                 (conde ((== try-value (jbrk label^ break-value)) ;; Break does not match label
-                         (== `(,value ,store~ ,next-address~) `(,try-value ,store^ ,next-address^))
-                         (=/= label^ label))
-                        ((== try-value `(,first . ,rest)) ;; No break was caught
-                         (== `(,value ,store~ ,next-address~) `(,try-value ,store^ ,next-address^))
-                         (=/= first `break))
-                        ((== try-value (jbrk label break-value)) ;; Exception was caught
-                         (appendo `((,catch-var . ,break-value)) env env^)
-                         (eval-envo catch-exp env^ value store^ store~ next-address^ next-address~)))))
-         ((jdeltao env exp value store store~ next-address next-address~))
-         ((fresh (label val val^) ;; Throw
-                 (== exp (jthrow label val))
-                 (eval-envo val env val^ store store~ next-address next-address~)
-                 (effect-propagateo val^ value
-                                    store~ store~
-                                    next-address~ next-address~
-                                    (== value (jbrk label val^)))))))
+    ((fresh (stored-expr stored-val next-address^ store^)
+       (== expr (jall stored-expr))
+       (eval-envo stored-expr env stored-val store store^ next-address next-address^)
+       (effect-propagateo stored-val value store^ store~ next-address^ next-address~
+         (== value (jref next-address^))
+         (appendo store^ `(,stored-val) store~)
+         (incremento next-address^ next-address~))))
+    ;; Mutable references: dereferencing (Section 2.2.3)
+    ((fresh (addr-expr addr-val value^)
+       (== expr (jderef addr-expr))
+       (eval-envo addr-expr env value^ store store~ next-address next-address~)
+       (effect-propagateo value^ value store~ store~ next-address~ next-address~
+         (== value^ (jref addr-val))
+         (indexo store~ addr-val value))))
+    ;; Mutable references: assignment (Section 2.2.3)
+    ((fresh (addr-expr addr-val stored-expr stored-val store^ value^)
+       (== expr (jassign addr-expr stored-expr))
+       (eval-env-listo `(,addr-expr ,stored-expr) env value^ store store^ next-address next-address~)
+       (effect-propagateo value^ value store^ store~ next-address~ next-address~
+         (== value^ (value-list `(,(jref addr-val) ,stored-val)))
+         (== value stored-val)
+         (set-indexo store^ addr-val stored-val store~))))
+    ;; Begin expression (Section 2.2.5)
+    ((fresh (first-expr second-expr first-val value^)
+       (== expr (jbeg first-expr second-expr))
+       (eval-env-listo `(,first-expr ,second-expr) env value^ store store~ next-address next-address~)
+       (effect-propagateo value^ value store~ store~ next-address~ next-address~
+         (== value^ (value-list `(,first-val ,value))))))
+    ;; If expression (Section 2.2.5)
+    ((fresh (cond-expr cond-val then-expr else-expr store^ next-address^)
+       (== expr (jif cond-expr then-expr else-expr))
+       (eval-envo cond-expr env cond-val store store^ next-address next-address^)
+       (effect-propagateo cond-val value store^ store~ next-address^ next-address~
+         (conde ((== cond-val (jbool #f))
+                 (eval-envo else-expr env value store^ store~ next-address^ next-address~))
+                ((== cond-val (jbool #t))
+                 (eval-envo then-expr env value store^ store~ next-address^ next-address~))))))
+    ;; While expression (Section 2.2.5)
+    ((fresh (cond-expr cond-val body-expr store^ next-address^)
+       (== expr (jwhile cond-expr body-expr))
+       (eval-envo cond-expr env cond-val store store^ next-address next-address^)
+       (effect-propagateo cond-val value store^ store~ next-address^ next-address~
+         (conde ((== cond-val (jbool #f))
+                 (== value (jundef))
+                 (== store^ store~)
+                 (== next-address^ next-address~))
+                ((== cond-val (jbool #t))
+                 (eval-envo (jbeg body-expr (jwhile cond-expr body-expr)) ; next step of while loop
+                            env value store^ store~ next-address^ next-address~))))))
+    ;; Try/finally expression (Section 2.2.5)
+    ((fresh (try-expr try-val finally-expr finally-val store^ next-address^)
+       (== expr (jfin try-expr finally-expr))
+       (eval-envo try-expr env try-val store store^ next-address next-address^)
+       (eval-envo finally-expr env finally-val store^ store~ next-address^ next-address~)
+       (effect-propagateo finally-val value store~ store~ next-address~ next-address~
+         (== value try-val))))
+    ;; Try/catch expression (Section 2.2.5)
+    ((fresh (try-expr try-val try-val-tag try-val-payload
+             catch-label catch-var catch-expr
+             break-label break-val
+             store^ next-address^ env^)
+       (== expr (jcatch catch-label try-expr catch-var catch-expr))
+       (eval-envo try-expr env try-val store store^ next-address next-address^)
+       (conde ((== try-val (jbrk break-label break-val)) ;; Break does not match label
+               (== `(,value ,store~ ,next-address~) `(,try-val ,store^ ,next-address^))
+               (=/= break-label catch-label))
+              ((== try-val `(,try-val-tag . ,try-val-payload)) ;; No break was caught
+               (== `(,value ,store~ ,next-address~) `(,try-val ,store^ ,next-address^))
+               (=/= try-val-tag `break))
+              ((== try-val (jbrk catch-label break-val)) ;; Exception was caught
+               (appendo `((,catch-var . ,break-val)) env env^)
+               (eval-envo catch-expr env^ value store^ store~ next-address^ next-address~)))))
+    ;; Builtin operations (Section 3.2.5)
+    ((jdeltao env expr value store store~ next-address next-address~))
+    ;; Throw expressions (Section 2.2.5)
+    ((fresh (label thrown-expr thrown-val) ;; Throw
+       (== expr (jthrow label thrown-expr))
+       (eval-envo thrown-expr env thrown-val store store~ next-address next-address~)
+       (effect-propagateo thrown-val value store~ store~ next-address~ next-address~
+         (== value (jbrk label thrown-val)))))))
 
-(define (jdeltao env exp value store store~ next-address next-address~)
+(define (jdeltao env expr value store store~ next-address next-address~)
   (fresh (func vals op1 op2 v1 v2 vals^ res rem value^)
-         (== exp (jdelta func vals))
+         (== expr (jdelta func vals))
          (eval-env-listo vals env value^ store store~ next-address next-address~)
          (effect-propagateo value^ value
                             store~ store~
@@ -202,19 +205,19 @@
                                     (conde ((== func `string-+) (== value (jrawstr res)) (appendo op1 op2 res))
                                            ((== func `string-<) (string-lesso op1 op2 value))))))))
 
-(define (typeofo exp value store)
-  (fresh (temp)(conde ((== exp (jundef))
+(define (typeofo expr value store)
+  (fresh (temp)(conde ((== expr (jundef))
                        (== value (jstr "undefined")))
-                      ((== exp (jnul))
+                      ((== expr (jnul))
                        (== value (jstr "object")))
-                      ((== exp `(string . ,temp)) ;; For all of these, the prefixes are hardcoded
+                      ((== expr `(string . ,temp)) ;; For all of these, the prefixes are hardcoded
                        (== value (jstr "string")))
-                      ((== exp  `(number . ,temp))
+                      ((== expr  `(number . ,temp))
                        (== value (jstr "number")))
-                      ((== exp  `(boolean . ,temp))
+                      ((== expr  `(boolean . ,temp))
                        (== value (jstr "boolean")))
                       ((fresh (fields priv call)
-                              (== exp (jref temp))
+                              (== expr (jref temp))
                               (conde ((== value (jstr "object"))
                                       (indexo store temp `(object ,fields))
                                       (lookupo (jstr "private") fields (jobj priv))
@@ -246,13 +249,13 @@
 
 (define (eval-env-listo elist env vlist store store~ next-address next-address~)
   (conde ((== elist `()) (== vlist (value-list `())) (== store store~) (== next-address next-address~))
-         ((fresh (exp exp-rest val value-rest value-rest^ store^ next-address^)
-                 (== elist `(,exp . ,exp-rest))
-                 (eval-envo exp env val store store^ next-address next-address^)
+         ((fresh (expr expr-rest val value-rest value-rest^ store^ next-address^)
+                 (== elist `(,expr . ,expr-rest))
+                 (eval-envo expr env val store store^ next-address next-address^)
                  (effect-propagateo val vlist
                                     store^ store~
                                     next-address^ next-address~
-                                    (eval-env-listo exp-rest env value-rest store^ store~ next-address^ next-address~)
+                                    (eval-env-listo expr-rest env value-rest store^ store~ next-address^ next-address~)
                                     (effect-propagateo value-rest vlist
                                                        store~ store~
                                                        next-address~ next-address~
@@ -260,14 +263,14 @@
                                                        (== vlist (value-list `(,val . ,value-rest^)))))))))
 
 
-(define (jnumbero exp)
-  (fresh (val) (== exp `(number ,val))))
+(define (jnumbero expr)
+  (fresh (val) (== expr `(number ,val))))
 
-(define (jstro exp)
-  (fresh (val) (== exp `(string ,val))))
+(define (jstro expr)
+  (fresh (val) (== expr `(string ,val))))
 
-(define (objecto exp)
-  (fresh (binds) (== exp `(object ,binds))))
+(define (objecto expr)
+  (fresh (binds) (== expr `(object ,binds))))
 
-(define (boolo exp)
-  (fresh (b) (== exp (jbool b))))
+(define (boolo expr)
+  (fresh (b) (== expr (jbool b))))
