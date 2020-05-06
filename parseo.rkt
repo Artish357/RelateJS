@@ -2,94 +2,95 @@
 (require "js-structures.rkt" "faster-miniKanren/mk.rkt" "evalo.rkt" "helpers.rkt")
 (provide hoist-varo hoist-var-listo hoist-pairso humanize dehumanize parseo/readable parseo)
 
-; Parse JavaScript statements with human-readable literals
-(define (parseo/readable stmt ljsexpr)
-  (parseo (dehumanize stmt) ljsexpr))
+; Parse a JavaScript statement with human-readable literals
+(define (parseo/readable stmt jexpr)
+  (parseo (dehumanize stmt) jexpr))
 
-; Parse JavaScript statements with relational number and string literals
-(define (parseo stmt jexp)
+; Parse a JavaScript statement with relational number and string literals
+(define (parseo stmt jexpr)
   (fresh (vars exp^ allocations body)
          (hoist-varo stmt vars)
-         (allocato vars body jexp)
+         (allocato vars body jexpr)
          (parse-envo stmt body vars)))
 
-(define (parse-envo stmt jexp env)
-  (conde ((parse-exp-envo stmt jexp env)) ;; Expressions
-         ((fresh (exps exps^ jexp^) ;; Begin
+; Parse a JavaScript statement to LamdaJs expression
+(define (parse-envo stmt jexpr env)
+  (conde ((parse-exp-envo stmt jexpr env)) ;; Expressions
+         ((fresh (exps exps^ jexpr^) ;; Begin
                  (== stmt `(begin . ,exps))
-                 (== jexp (jbeg jexp^ (jundef)))
+                 (== jexpr (jbeg jexpr^ (jundef)))
                  (parse-env-listo exps exps^ env)
-                 (begino exps^ jexp^)))
+                 (begino exps^ jexpr^)))
          ((fresh (cond then else cond^ then^ else^) ;; if statements
                  (== stmt `(if ,cond ,then ,else))
-                 (== jexp (jbeg (jif cond^ then^ else^) (jundef)))
+                 (== jexpr (jbeg (jif cond^ then^ else^) (jundef)))
                  (parse-exp-envo cond cond^ env)
                  (parse-env-listo `(,then ,else) `(,then^ ,else^) env)))
-         ((varo stmt jexp env)) ;; Var
-         ((parse-foro stmt jexp env))
+         ((varo stmt jexpr env)) ;; Var
+         ((parse-foro stmt jexpr env))
          ;; different breaks
          ((fresh (val val^)  ;; return
                  (== stmt `(return ,val))
-                 (== jexp (jthrow `return val^))
+                 (== jexpr (jthrow `return val^))
                  (parse-exp-envo val val^ env)
                  ))
          ((fresh (val val^)  ;; throw
                  (== stmt `(throw ,val))
-                 (== jexp (jthrow `error val^))
+                 (== jexpr (jthrow `error val^))
                  (parse-exp-envo val val^ env)
                  ))
          ((fresh (val)  ;; break
                  (== stmt `(break))
-                 (== jexp (jthrow `break (jundef)))))
+                 (== jexpr (jthrow `break (jundef)))))
          ((fresh (try-exp catch-exp try-exp^ catch-exp^ catch-var env^) ;; Try/catch
                  (== stmt `(try ,try-exp catch ,catch-var ,catch-exp))
-                 (== jexp (jbeg (jcatch `error try-exp^ catch-var
+                 (== jexpr (jbeg (jcatch `error try-exp^ catch-var
                                   (jlet catch-var (jall (jvar catch-var)) catch-exp^)) (jundef)))
                  (== env^ `(,catch-var . ,env))
                  (parse-env-listo `(,try-exp ,catch-exp) `(,try-exp^ ,catch-exp^) env^)))
          ((fresh (try-exp try-exp^  finally-exp finally-exp^) ;; Try/finally
                  (== stmt `(try ,try-exp finally ,finally-exp))
-                 (== jexp (jfin try-exp^ (jbeg finally-exp^ (jundef))))
+                 (== jexpr (jfin try-exp^ (jbeg finally-exp^ (jundef))))
                  (parse-env-listo `(,try-exp ,finally-exp) `(,try-exp^ ,finally-exp^) env)
                  ))
          ((fresh (try-exp catch-exp try-exp^ catch-exp^ finally-exp finally-exp^ catch-var env^) ;; Try/catch/finally
                  (== stmt `(try ,try-exp catch ,catch-var ,catch-exp finally ,finally-exp))
-                 (== jexp (jbeg (jcatch `error try-exp^ catch-var catch-exp^) (jbeg finally-exp^ (jundef))))
+                 (== jexpr (jbeg (jcatch `error try-exp^ catch-var catch-exp^) (jbeg finally-exp^ (jundef))))
                  (== env^ `(,catch-var . ,env))
                  (parse-env-listo `(,try-exp ,catch-exp ,finally-exp) `(,try-exp^ ,catch-exp^ ,finally-exp^) env^)))
          ((fresh (cond body cond^ body^ body^^) ;; while statements
                  (== stmt `(while ,cond . ,body))
-                 (== jexp (jcatch `break (jwhile cond^ body^^) `e (jundef)))
+                 (== jexpr (jcatch `break (jwhile cond^ body^^) `e (jundef)))
                  (parse-exp-envo cond cond^ env)
                  (parse-env-listo body body^ env)
                  (begino body^ body^^)))))
 
-(define (parse-exp-envo stmt jexp env)
+(define (parse-exp-envo stmt jexpr env)
   (conde
    ;; Variables
-   ((symbolo stmt ) (== jexp (jderef (jvar stmt ))))
+   ((symbolo stmt ) (== jexpr (jderef (jvar stmt ))))
    ;; Simple literals
-   ((conde ((== stmt jexp) (fresh (x) (conde ((== stmt `(number ,x)))
+   ((conde ((== stmt jexpr) (fresh (x) (conde ((== stmt `(number ,x)))
                                             ((== stmt `(string ,x))))))
-           ((== stmt #t) (== jexp (jbool #t)))
-           ((== stmt #f) (== jexp (jbool #f)))
-           ((== stmt (jnul)) (== jexp (jnul)))
-           ((== stmt (jundef)) (== jexp (jundef)))))
+           ((== stmt #t) (== jexpr (jbool #t)))
+           ((== stmt #f) (== jexpr (jbool #f)))
+           ((== stmt (jnul)) (== jexpr (jnul)))
+           ((== stmt (jundef)) (== jexpr (jundef)))))
    ;; Primitive operations
    ((fresh (op vals vals^)
            (== stmt `(op ,op . ,vals))
-           (== jexp (jdelta op vals^))
+           (== jexpr (jdelta op vals^))
            (parse-exp-env-listo vals vals^ env)))
    ;; Assignment
    ((fresh (var val var^ val^)
            (== stmt `(:= ,var ,val))
-           (conde ((symbolo var) (== jexp (jassign (jvar var) val^)))
+           (conde ((symbolo var) (== jexpr (jassign (jvar var) val^)))
                   ((fresh (obj obj^ key key^ obj-parsed temp-var)
                           (== var `(@ ,obj ,key))
                           (== obj-parsed (jvar obj))
                           (symbolo temp-var)
                           (not-in-listo temp-var env)
-                          (== jexp (jbeg
+                          (== jexpr (jbeg
                                     (jlet
                                      temp-var
                                      (jset (jderef obj^) (jstr "public") (jset (jget (jderef obj^) (jstr "public")) key^ val^))
@@ -100,25 +101,25 @@
    ;; Field access
    ((fresh (val val^ index index^)
            (== stmt `(@ ,val ,index))
-           (== jexp (jget (jget (jderef val^) (jstr "public")) index^))
+           (== jexpr (jget (jget (jderef val^) (jstr "public")) index^))
            (parse-exp-env-listo `(,val ,index) `(,val^ ,index^) env)))
    ;; Function call
    ((fresh (func args func^ args^)
            (== stmt `(call ,func . ,args))
-           (== jexp (japp (jget (jget (jderef func^) (jstr "private")) (jstr "call")) args^))
+           (== jexpr (japp (jget (jget (jderef func^) (jstr "private")) (jstr "call")) args^))
            (parse-exp-env-listo `(,func . ,args) `(,func^ . ,args^) env)))
-   ((objecto stmt jexp env))
-   ((functiono stmt jexp env))
+   ((objecto stmt jexpr env))
+   ((functiono stmt jexpr env))
    ;; Comma expression sequencing
    ((fresh (exps exps^)
            (== stmt `(comma . ,exps))
            (parse-exp-env-listo exps exps^ env)
-           (begino exps^ jexp)))))
+           (begino exps^ jexpr)))))
 
-(define (parse-foro stmt jexp env)
+(define (parse-foro stmt jexpr env)
   (fresh (init init^ cond cond^ inc inc^ body body^ body^^)
          (== stmt `(for (,init ,cond ,inc) . ,body))
-         (== jexp (jbeg init^ (jcatch `break (jwhile cond^ (jbeg body^^ inc^)) `e (jundef))))
+         (== jexpr (jbeg init^ (jcatch `break (jwhile cond^ (jbeg body^^ inc^)) `e (jundef))))
          (parse-exp-env-listo `(,cond ,inc) `(,cond^ ,inc^) env)
          (parse-envo init init^ env)
          (parse-env-listo body body^ env)
@@ -144,42 +145,42 @@
                  ))))
 
 
-(define (lh-parseo stmt jexp env)
-  (conde ((symbolo stmt ) (== jexp (jvar stmt )))
+(define (lh-parseo stmt jexpr env)
+  (conde ((symbolo stmt ) (== jexpr (jvar stmt )))
          ((fresh (obj obj^ val val^)
                  (== stmt `(@ ,obj ,val))
-                 (== jexp (jget (jget obj^ (jstr "public")) val^))
+                 (== jexpr (jget (jget obj^ (jstr "public")) val^))
                  (parse-exp-env-listo `(,obj ,val) `(,obj^ ,val^) env)))))
 
-(define (objecto stmt jexp env)
+(define (objecto stmt jexpr env)
   (fresh (pairs public)
          (== stmt `(object . ,pairs))
-         (== jexp (jall (jset (jobj (list (cons (jstr "private") (jobj `())))) (jstr "public") public)))
+         (== jexpr (jall (jset (jobj (list (cons (jstr "private") (jobj `())))) (jstr "public") public)))
          (object-helpero pairs public env)
          ))
 
-(define (object-helpero exp-binds jexp env)
-  (conde ((== exp-binds `()) (== jexp (jobj `())))
+(define (object-helpero exp-binds jexpr env)
+  (conde ((== exp-binds `()) (== jexpr (jobj `())))
          ((fresh (key val key^ val^ rest prev curr)
                  (== exp-binds `((,key ,val) . ,rest))
-                 (== jexp (jset prev key^ val^))
+                 (== jexpr (jset prev key^ val^))
                  (parse-exp-env-listo `(,key ,val) `(,key^ ,val^) env)
                  (object-helpero rest prev env)))))
 
-(define (varo stmt jexp env)
-  (fresh (vars pairs jexp^)
+(define (varo stmt jexpr env)
+  (fresh (vars pairs jexpr^)
          (== stmt `(var . ,vars))
          (hoist-pairso vars pairs)
-         (conde ((== pairs `()) (== jexp (jundef)))
-                ((== jexp (jbeg jexp^ (jundef)))
+         (conde ((== pairs `()) (== jexpr (jundef)))
+                ((== jexpr (jbeg jexpr^ (jundef)))
                  (=/= pairs `())
-                 (pair-assigno pairs jexp^ env)
+                 (pair-assigno pairs jexpr^ env)
                  ))))
 
-(define (functiono stmt jexp env)
+(define (functiono stmt jexpr env)
   (fresh (params body body^ body^^ body^^^ body^^^^ vars vars^ payload env^ env^^ return-var)
          (== stmt `(function ,params . ,body))
-         (== jexp (jall (jset (jobj `((,(jstr "public") . ,(jobj `()))))
+         (== jexpr (jall (jset (jobj `((,(jstr "public") . ,(jobj `()))))
                               (jstr "private")
                               (jset (jobj `()) (jstr "call")
                                     (jfun params
@@ -207,22 +208,22 @@
                          (differenceo rest list2 result)))
                  ))))
 
-(define (leto vars cont jexp)
+(define (leto vars cont jexpr)
   (fresh (k v rest let-rest)
          (== vars `((,k . ,v) . ,rest))
-         (== jexp (jlet k v let-rest))
+         (== jexpr (jlet k v let-rest))
          (conde ((== rest `())
                  (== let-rest cont))
                 ((=/= rest `())
                  (leto rest cont let-rest)))))
 
-(define (begino lst jexp)
-  (conde ((== lst `()) (== jexp (jundef)))
-         ((== lst `(,jexp)))
+(define (begino lst jexpr)
+  (conde ((== lst `()) (== jexpr (jundef)))
+         ((== lst `(,jexpr)))
          ((fresh (a rest rest-exp)
                  (== lst `(,a . ,rest))
                  (=/= rest `())
-                 (== jexp (jbeg a rest-exp))
+                 (== jexpr (jbeg a rest-exp))
                  (begino rest rest-exp)
                  ))))
 
@@ -303,15 +304,15 @@
                          (== name var)))
                  (hoist-nameso v-rest rest)))))
 
-(define (pair-assigno pairs jexp env)
+(define (pair-assigno pairs jexpr env)
   (fresh (var val val^ rest cont)
          (== pairs `((,var ,val) . ,rest))
          (symbolo var)
          (parse-exp-envo val val^ env)
          (conde ((== rest `())
-                 (== jexp (jassign (jvar var) val^)))
+                 (== jexpr (jassign (jvar var) val^)))
                 ((=/= rest `())
-                 (== jexp (jbeg (jassign (jvar var) val^) cont))
+                 (== jexpr (jbeg (jassign (jvar var) val^) cont))
                  (pair-assigno rest cont env)
                  ))))
 
