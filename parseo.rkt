@@ -46,18 +46,23 @@
              inc-expr inc-jexpr
              body-stmts body-jexprs body-jexpr)
        (== stmt `(for (,init-stmt ,cond-expr ,inc-expr) . ,body-stmts))
-       (== jexpr (jbeg init-jexpr (jcatch `break (jwhile cond-jexpr (jbeg body-jexpr inc-jexpr)) `e (jundef))))
-         (parse-exp-env-listo `(,cond-expr ,inc-expr) `(,cond-jexpr ,inc-jexpr) env)
-         (parse-envo init-stmt init-jexpr env)
-         (parse-env-listo body-stmts body-jexprs env)
-         (begino body-jexprs body-jexpr)))
+       (== jexpr (jbeg init-jexpr
+                       (jcatch `break
+                               (jwhile cond-jexpr (jbeg body-jexpr inc-jexpr))
+                               `e
+                               (jundef))))
+       (parse-exp-env-listo `(,cond-expr ,inc-expr) `(,cond-jexpr ,inc-jexpr) env)
+       (parse-envo init-stmt init-jexpr env)
+       (parse-env-listo body-stmts body-jexprs env)
+       (begino body-jexprs body-jexpr)))
+    ; return control effect (Section 3.2.8)
+    ((fresh (val-expr val-jexpr)
+       (== stmt `(return ,val-expr))
+       (== jexpr (jthrow `return val-jexpr))
+       (parse-exp-envo val-expr val-jexpr env)))
+    ; throw control effect (Section 3.2.8)
 
-         ;; different breaks
-         ((fresh (val val^)  ;; return
-                 (== stmt `(return ,val))
-                 (== jexpr (jthrow `return val^))
-                 (parse-exp-envo val val^ env)
-                 ))
+
          ((fresh (val val^)  ;; throw
                  (== stmt `(throw ,val))
                  (== jexpr (jthrow `error val^))
