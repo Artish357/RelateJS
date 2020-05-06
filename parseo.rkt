@@ -33,15 +33,25 @@
                         `(,jexpr-then ,jexpr-else)
                         env)))
     ; variable declaration (Section 3.2.1)
-    ((fresh (vars bindings jexpr^)
+    ((fresh (vars bindings jexpr-assignments)
        (== stmt `(var . ,vars))
        (hoist-pairso vars bindings)
        (conde ((== bindings `()) (== jexpr (jundef)))
-              ((== jexpr (jbeg jexpr^ (jundef)))
+              ((== jexpr (jbeg jexpr-assignments (jundef)))
                (=/= bindings `())
-               (pair-assigno bindings jexpr^ env)))))
-
-         ((parse-foro stmt jexpr env))
+               (pair-assigno bindings jexpr-assignments env)))))
+    ; for loops (Section 3.2.7)
+    ((fresh (init-stmt jexpr-init
+             cond-expr jexpr-cond
+             inc-expr jexpr-inc
+             body-stmts jexpr-body body^^)
+       (== stmt `(for (,init-stmt ,cond-expr ,inc-expr) . ,body-stmts))
+       (== jexpr (jbeg jexpr-init (jcatch `break (jwhile jexpr-cond (jbeg body^^ jexpr-inc)) `e (jundef))))
+         (parse-exp-env-listo `(,cond-expr ,inc-expr) `(,jexpr-cond ,jexpr-inc) env)
+         (parse-envo init-stmt jexpr-init env)
+         (parse-env-listo body-stmts jexpr-body env)
+         (begino jexpr-body body^^)
+         ))
 
          ;; different breaks
          ((fresh (val val^)  ;; return
