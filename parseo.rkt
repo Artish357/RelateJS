@@ -19,39 +19,38 @@
     ; expressions have a helper for their own
     ((parse-exp-envo stmt jexpr env))
     ; begin statement (Section 3.2.7)
-    ((fresh (stmts jexprs jexpr-begin)
+    ((fresh (stmts jexprs begin-jexpr)
        (== stmt `(begin . ,stmts))
-       (== jexpr (jbeg jexpr-begin (jundef)))
+       (== jexpr (jbeg begin-jexpr (jundef)))
        (parse-env-listo stmts jexprs env)
-       (begino jexprs jexpr-begin)))
+       (begino jexprs begin-jexpr)))
     ; if statement  (Section 3.2.7)
-    ((fresh (cond-expr then-stmt else-stmt jexpr-cond jexpr-then jexpr-else)
+    ((fresh (cond-expr then-stmt else-stmt cond-jexpr then-jexpr else-jexpr)
        (== stmt `(if ,cond-expr ,then-stmt ,else-stmt))
-       (== jexpr (jbeg (jif jexpr-cond jexpr-then jexpr-else) (jundef)))
-       (parse-exp-envo cond-expr jexpr-cond env)
+       (== jexpr (jbeg (jif cond-jexpr then-jexpr else-jexpr) (jundef)))
+       (parse-exp-envo cond-expr cond-jexpr env)
        (parse-env-listo `(,then-stmt ,else-stmt)
-                        `(,jexpr-then ,jexpr-else)
+                        `(,then-jexpr ,else-jexpr)
                         env)))
     ; variable declaration (Section 3.2.1)
-    ((fresh (vars bindings jexpr-assignments)
+    ((fresh (vars bindings assignments-jexpr)
        (== stmt `(var . ,vars))
        (hoist-pairso vars bindings)
        (conde ((== bindings `()) (== jexpr (jundef)))
-              ((== jexpr (jbeg jexpr-assignments (jundef)))
+              ((== jexpr (jbeg assignments-jexpr (jundef)))
                (=/= bindings `())
-               (pair-assigno bindings jexpr-assignments env)))))
+               (pair-assigno bindings assignments-jexpr env)))))
     ; for loops (Section 3.2.7)
-    ((fresh (init-stmt jexpr-init
-             cond-expr jexpr-cond
-             inc-expr jexpr-inc
-             body-stmts jexpr-body body^^)
+    ((fresh (init-stmt init-jexpr
+             cond-expr cond-jexpr
+             inc-expr inc-jexpr
+             body-stmts body-jexprs body-jexpr)
        (== stmt `(for (,init-stmt ,cond-expr ,inc-expr) . ,body-stmts))
-       (== jexpr (jbeg jexpr-init (jcatch `break (jwhile jexpr-cond (jbeg body^^ jexpr-inc)) `e (jundef))))
-         (parse-exp-env-listo `(,cond-expr ,inc-expr) `(,jexpr-cond ,jexpr-inc) env)
-         (parse-envo init-stmt jexpr-init env)
-         (parse-env-listo body-stmts jexpr-body env)
-         (begino jexpr-body body^^)
-         ))
+       (== jexpr (jbeg init-jexpr (jcatch `break (jwhile cond-jexpr (jbeg body-jexpr inc-jexpr)) `e (jundef))))
+         (parse-exp-env-listo `(,cond-expr ,inc-expr) `(,cond-jexpr ,inc-jexpr) env)
+         (parse-envo init-stmt init-jexpr env)
+         (parse-env-listo body-stmts body-jexprs env)
+         (begino body-jexprs body-jexpr)))
 
          ;; different breaks
          ((fresh (val val^)  ;; return
