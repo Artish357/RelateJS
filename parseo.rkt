@@ -87,19 +87,22 @@
     ((fresh (try-stmt try-jexpr
              catch-stmt catch-jexpr catch-var catch-env
              finally-stmt finally-jexpr)
-       (== stmt `(try ,try-stmt catch ,catch-var ,catch-stmt finally ,finally-stmt))
-       (== jexpr (jbeg (jcatch `error try-jexpr catch-var catch-jexpr) (jbeg finally-jexpr (jundef))))
+       (== stmt `(try ,try-stmt
+                  catch ,catch-var ,catch-stmt
+                  finally ,finally-stmt))
+       (== jexpr (jbeg (jcatch `error try-jexpr catch-var catch-jexpr)
+                       (jbeg finally-jexpr (jundef))))
        (== catch-env `(,catch-var . ,env))
        (parse-envo try-stmt try-jexpr env)
        (parse-envo catch-stmt catch-jexpr catch-env)
        (parse-envo finally-stmt finally-jexpr env)))
     ; while statements (Section 3.2.7)
-    ((fresh (cond body cond^ body^ body^^)
-                 (== stmt `(while ,cond . ,body))
-                 (== jexpr (jcatch `break (jwhile cond^ body^^) `e (jundef)))
-                 (parse-exp-envo cond cond^ env)
-                 (parse-env-listo body body^ env)
-                 (begino body^ body^^)))))
+    ((fresh (cond-expr cond-jexpr body-stmts body-jexprs body-jexpr)
+       (== stmt `(while ,cond-expr . ,body-stmts))
+       (== jexpr (jcatch `break (jwhile cond-jexpr body-jexpr) `e (jundef)))
+       (parse-exp-envo cond-expr cond-jexpr env)
+       (parse-env-listo body-stmts body-jexprs env)
+       (begino body-jexprs body-jexpr)))))
 
 (define (parse-exp-envo stmt jexpr env)
   (conde
@@ -151,16 +154,6 @@
            (== stmt `(comma . ,exps))
            (parse-exp-env-listo exps exps^ env)
            (begino exps^ jexpr)))))
-
-(define (parse-foro stmt jexpr env)
-  (fresh (init init^ cond cond^ inc inc^ body body^ body^^)
-         (== stmt `(for (,init ,cond ,inc) . ,body))
-         (== jexpr (jbeg init^ (jcatch `break (jwhile cond^ (jbeg body^^ inc^)) `e (jundef))))
-         (parse-exp-env-listo `(,cond ,inc) `(,cond^ ,inc^) env)
-         (parse-envo init init^ env)
-         (parse-env-listo body body^ env)
-         (begino body^ body^^)
-         ))
 
 (define (parse-env-listo lst jlst env)
   (conde ((== lst `()) (== jlst `()))
