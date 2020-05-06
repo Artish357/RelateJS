@@ -24,7 +24,7 @@
        (== jexpr (jbeg jexpr-begin (jundef)))
        (parse-env-listo stmts jexprs env)
        (begino jexprs jexpr-begin)))
-    ; if statement 
+    ; if statement  (Section 3.2.7)
     ((fresh (cond-expr then-stmt else-stmt jexpr-cond jexpr-then jexpr-else)
        (== stmt `(if ,cond-expr ,then-stmt ,else-stmt))
        (== jexpr (jbeg (jif jexpr-cond jexpr-then jexpr-else) (jundef)))
@@ -32,9 +32,15 @@
        (parse-env-listo `(,then-stmt ,else-stmt)
                         `(,jexpr-then ,jexpr-else)
                         env)))
+    ; variable declaration (Section 3.2.1)
+    ((fresh (vars bindings jexpr^)
+       (== stmt `(var . ,vars))
+       (hoist-pairso vars bindings)
+       (conde ((== bindings `()) (== jexpr (jundef)))
+              ((== jexpr (jbeg jexpr^ (jundef)))
+               (=/= bindings `())
+               (pair-assigno bindings jexpr^ env)))))
 
-
-         ((varo stmt jexpr env)) ;; Var
          ((parse-foro stmt jexpr env))
 
          ;; different breaks
@@ -176,15 +182,6 @@
                  (parse-exp-env-listo `(,key ,val) `(,key^ ,val^) env)
                  (object-helpero rest prev env)))))
 
-(define (varo stmt jexpr env)
-  (fresh (vars pairs jexpr^)
-         (== stmt `(var . ,vars))
-         (hoist-pairso vars pairs)
-         (conde ((== pairs `()) (== jexpr (jundef)))
-                ((== jexpr (jbeg jexpr^ (jundef)))
-                 (=/= pairs `())
-                 (pair-assigno pairs jexpr^ env)
-                 ))))
 
 (define (functiono stmt jexpr env)
   (fresh (params body body^ body^^ body^^^ body^^^^ vars vars^ payload env^ env^^ return-var)
