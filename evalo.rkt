@@ -16,8 +16,12 @@
     ((== expr value)
      (== store store~)
      (== next-address next-address~)
-     (conde ((jnumbero expr)) ((objecto expr)) ((boolo expr)) ((jstro expr))
-            ((== expr (jundef))) ((== expr (jnul)))))
+     (conde ((fresh (payload) (== expr `(number ,payload))))
+            ((fresh (binds) (== expr `(object ,binds))))
+            ((fresh (b) (== expr (jbool b))))
+            ((fresh (payload) (== expr `(string ,payload))))
+            ((== expr (jundef)))
+            ((== expr (jnul)))))
     ;; Let expressions (Section 2.2.2)
     ((fresh (lhs-var          ; variable being bound
              rhs-expr rhs-val ; right-hand side expression & value
@@ -299,18 +303,6 @@
             (== value (jbool #f))
             (=/= x y)
             (<=o y x)))))
-
-(define (jnumbero expr)
-  (fresh (val) (== expr `(number ,val))))
-
-(define (jstro expr)
-  (fresh (val) (== expr `(string ,val))))
-
-(define (objecto expr)
-  (fresh (binds) (== expr `(object ,binds))))
-
-(define (boolo expr)
-  (fresh (b) (== expr (jbool b))))
 
 (define (value-list values)
   (cons `value-list values))
