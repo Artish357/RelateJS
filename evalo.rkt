@@ -140,7 +140,7 @@
                          (== `(,value ,store~ ,next-address~) `(,try-value ,store^ ,next-address^))
                          (=/= first `break))
                         ((== try-value (jbrk label break-value)) ;; Exception was caught
-                         (appendo env `((,catch-var . ,break-value)) env^)
+                         (appendo `((,catch-var . ,break-value)) env env^)
                          (eval-envo catch-exp env^ value store^ store~ next-address^ next-address~)))))
          ((jdeltao env exp value store store~ next-address next-address~))
          ((fresh (label val val^) ;; Throw

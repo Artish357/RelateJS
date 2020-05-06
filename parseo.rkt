@@ -180,14 +180,12 @@
                               (jset (jobj `()) (jstr "call")
                                     (jfun params
                                           (jcatch `return (jbeg body^^^^ (jundef))
-                                                  return-var (jvar return-var)))))))
+                                                  'result (jvar 'result)))))))
          (hoist-var-listo body vars)
          (differenceo vars params vars^)
          (appendo vars^ env env^)
          (appendo params env^ env^^)
-         ; To avoid collisions
-         (not-in-listo return-var env^^)
-         (parse-env-listo body body^ `(,return-var . ,env^^))
+         (parse-env-listo body body^ env^^)
          (begino body^ body^^)
          (allocato vars^ body^^ body^^^)
          (assigno params body^^^ body^^^^)

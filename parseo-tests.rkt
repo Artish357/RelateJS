@@ -127,21 +127,15 @@
              (("private" object ())
               ("public" object (("1" . 5) ("0" . 4)))))))
 
-  ;; TODO:
   (test= "Object packing/unpacking 3"
-         (run* (store res)
-           (fresh (code)
+         (run* (res)
+           (fresh (code store)
              (parseo/readable
                '(call (function ()
                                 (var (compute (function (n) (return (op + n 1)))))
-                                ;(return (call compute 4))
                                 (var (result (call compute 4)))
-                                ;(var (result 8))
-                                (return result)
-                                ;(return 7)
-                                ))
+                                (return result)))
                code)
-             (evalo code res store)
-             ))
-         'something)
+             (evalo code res store)))
+         `(,(jnum 5)))
 )
