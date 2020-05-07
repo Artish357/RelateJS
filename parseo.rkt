@@ -122,7 +122,7 @@
            (== expr `(op ,rator . ,rands))
            (== jexpr (jdelta rator rand-jexprs))
            (parse-expr-env-listo rands rand-jexprs env)))
-   ;; assignments (Section 3.2.6)
+   ;; assignments (Section 3.2.6) ---------- TODO: debug this
    ((fresh (var val var^ val^)
            (== expr `(:= ,var ,val))
            (conde ((symbolo var) (== jexpr (jassign (jvar var) val^)))
@@ -139,11 +139,12 @@
                                     val^))
                           (parse-expr-env-listo `(,key ,obj) `(,key^ ,obj^) env))))
            (parse-expr-envo val val^ env)))
-   ;; Field access
-   ((fresh (val val^ index index^)
-           (== expr `(@ ,val ,index))
-           (== jexpr (jget (jget (jderef val^) (jstr "public")) index^))
-           (parse-expr-env-listo `(,val ,index) `(,val^ ,index^) env)))
+   ;; object field access (Section 2.2.4)
+   ((fresh (obj-expr obj-jexpr field-expr field-jexpr)
+           (== expr `(@ ,obj-expr ,field-expr))
+           (== jexpr (jget (jget (jderef obj-jexpr) (jstr "public")) field-jexpr))
+           (parse-expr-envo obj-expr obj-jexpr env)
+           (parse-expr-envo field-expr field-jexpr env)))
    ;; Function call
    ((fresh (func args func^ args^)
            (== expr `(call ,func . ,args))
