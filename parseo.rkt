@@ -123,22 +123,25 @@
       (== jexpr (jdelta rator rand-jexprs))
       (parse-expr-env-listo rands rand-jexprs env)))
    ;; assignments (Section 3.2.6) ---------- TODO: debug this
-   ((fresh (var val var^ val^)
-           (== expr `(:= ,var ,val))
-           (conde ((symbolo var) (== jexpr (jassign (jvar var) val^)))
-                  ((fresh (obj obj^ key key^ obj-parsed temp-var)
-                          (== var `(@ ,obj ,key))
-                          (== obj-parsed (jvar obj))
-                          (symbolo temp-var)
-                          (not-in-listo temp-var env)
-                          (== jexpr (jbeg
-                                    (jlet
-                                     temp-var
-                                     (jset (jderef obj^) (jstr "public") (jset (jget (jderef obj^) (jstr "public")) key^ val^))
-                                     (jassign obj^ (jvar temp-var)))
-                                    val^))
-                          (parse-expr-env-listo `(,key ,obj) `(,key^ ,obj^) env))))
-           (parse-expr-envo val val^ env)))
+   ((fresh (lhs-expr rhs-expr rhs-jexpr)
+      (== expr `(:= ,lhs-expr ,rhs-expr))
+      (conde ((symbolo lhs-expr)
+              (== jexpr (jassign (jvar lhs-expr) rhs-jexpr)))
+             ((fresh (obj-expr obj-jexpr key-expr key-jexpr new-obj-var)
+                (== lhs-expr `(@ ,obj-expr ,key-expr))
+                (symbolo new-obj-var)
+                (not-in-listo new-obj-var env)
+                (== jexpr (jbeg
+                            (jlet
+                              new-obj-var
+                              (jset (jderef obj-jexpr) (jstr "public")
+                                    (jset (jget (jderef obj-jexpr) (jstr "public"))
+                                          key-jexpr rhs-jexpr))
+                              (jassign obj-jexpr (jvar new-obj-var)))
+                            rhs-jexpr))
+                (parse-expr-envo obj-expr obj-jexpr env)
+                (parse-expr-envo key-expr key-jexpr env))))
+      (parse-expr-envo rhs-expr rhs-jexpr env)))
    ;; object field access (Section 3.2.2)
    ((fresh (obj-expr obj-jexpr field-expr field-jexpr)
       (== expr `(@ ,obj-expr ,field-expr))
