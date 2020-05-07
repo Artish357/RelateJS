@@ -171,12 +171,11 @@
       (parse-expr-envo func-expr func-jexpr env)
       (parse-expr-env-listo arg-exprs arg-jexprs env)))
    ;; object creation (Section 3.2.4)
-   ((fresh (field-bindings public-jexpr)
-      (== expr `(object . ,field-bindings))
-      (== jexpr (jall (jset (jobj (list (cons (jstr "private") (jobj `()))))
-                            (jstr "public")
-                            public-jexpr)))
-      (parse-obj-bindingso field-bindings public-jexpr env)))
+   ((fresh (binding-exprs binding-jexprs)
+      (== expr `(object . ,binding-exprs))
+      (== jexpr (jall (jobj `((,(jstr "private") . ,(jobj '()))
+                              (,(jstr "public")  . ,(jobj binding-jexprs))))))
+      (parse-obj-bindingso binding-exprs binding-jexprs env)))
    ;; function definition (Section 3.2.3)
    ((fresh (params
             body-stmts ; javascript statements
@@ -191,15 +190,14 @@
             return-var)
       (== expr `(function ,params . ,body-stmts))
       (== jexpr
-          (jall (jset (jobj `((,(jstr "public") . ,(jobj `()))))
-                      (jstr "private")
-                      (jset (jobj `())
-                            (jstr "call")
-                            (jfun params
-                                  (jcatch `return
-                                          (jbeg body-jexpr/vars+params (jundef))
-                                          'result
-                                          (jvar 'result)))))))
+          (jall (jobj `((,(jstr "public") . ,(jobj '()))
+                        (,(jstr "private")
+                          . ,(jobj `((,(jstr "call")
+                                       . ,(jfun params
+                                                (jcatch 'return
+                                                        (jbeg body-jexpr/vars+params (jundef))
+                                                        'result
+                                                        (jvar 'result)))))))))))
       (hoist-var-listo body-stmts vars)
       (differenceo vars params hoisted-vars)
       (appendo hoisted-vars env env/hoisted-vars)
@@ -234,15 +232,13 @@
             (parse-expr-env-listo exprs-rest jexprs-rest env)))))
 
 ; object {...}
-;; TODO: LambdaJS should support object literals that evaluate field values
-(define (parse-obj-bindingso field-bindings obj-jexpr env)
-  (conde ((== field-bindings `())
-          (== obj-jexpr (jobj `())))
-         ((fresh (field val-expr val-jexpr rest-bindings prev-obj-jexpr)
-            (== field-bindings `(((string ,field) ,val-expr) . ,rest-bindings))
-            (== obj-jexpr (jset prev-obj-jexpr `(string ,field) val-jexpr))
+(define (parse-obj-bindingso binding-exprs binding-jexprs env)
+  (conde ((== binding-exprs '()) (== binding-jexprs '()))
+         ((fresh (field val-expr val-jexpr binding-exprs-rest binding-jexprs-rest)
+            (== binding-exprs  `((,field   ,val-expr)  . ,binding-exprs-rest))
+            (== binding-jexprs `((,field . ,val-jexpr) . ,binding-jexprs-rest))
             (parse-expr-envo val-expr val-jexpr env)
-            (parse-obj-bindingso rest-bindings prev-obj-jexpr env)))))
+            (parse-obj-bindingso binding-exprs-rest binding-jexprs-rest env)))))
 
 ; build nested LambdaJS begin out of a list of LambdaJS exprs
 (define (begino jexprs jexpr)

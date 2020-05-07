@@ -125,7 +125,7 @@
                            (evalo (jderef code) res store))))
          '((object
              (("private" object ())
-              ("public" object (("1" . 5) ("0" . 4)))))))
+              ("public" object (("0" . 4) ("1" . 5)))))))
 
   (test= "Object packing/unpacking 3"
          (run* (res)
