@@ -122,7 +122,7 @@
       (== expr `(op ,rator . ,rands))
       (== jexpr (jdelta rator rand-jexprs))
       (parse-expr-env-listo rands rand-jexprs env)))
-   ;; assignments (Section 3.2.6) ---------- TODO: debug this
+   ;; assignments (Section 3.2.6)
    ((fresh (lhs-expr rhs-expr rhs-jexpr)
       (== expr `(:= ,lhs-expr ,rhs-expr))
       (conde ((symbolo lhs-expr)
