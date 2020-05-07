@@ -10,7 +10,7 @@
 (define (parseo stmt jexpr)
   (fresh (vars exp^ allocations body)
          (hoist-varo stmt vars)
-         (allocato vars body jexpr)
+         (allocateo vars body jexpr)
          (parse-envo stmt body vars)))
 
 ; Parse a JavaScript statement to LambdaJS expression passing the env
@@ -172,29 +172,42 @@
       (parse-expr-env-listo arg-exprs arg-jexprs env)))
    ;; object creation (Section 3.2.4)
    ((fresh (field-bindings public-jexpr)
-         (== expr `(object . ,field-bindings))
-         (== jexpr (jall (jset (jobj (list (cons (jstr "private") (jobj `()))))
-                               (jstr "public")
-                               public-jexpr)))
-         (parse-obj-bindingso field-bindings public-jexpr env)))
-   ;; object definition (Section 3.2.4)
-   ((fresh (params body body^ body^^ body^^^ body^^^^ vars vars^ payload env^ env^^ return-var)
-         (== expr `(function ,params . ,body))
-         (== jexpr (jall (jset (jobj `((,(jstr "public") . ,(jobj `()))))
-                              (jstr "private")
-                              (jset (jobj `()) (jstr "call")
-                                    (jfun params
-                                          (jcatch `return (jbeg body^^^^ (jundef))
-                                                  'result (jvar 'result)))))))
-         (hoist-var-listo body vars)
-         (differenceo vars params vars^)
-         (appendo vars^ env env^)
-         (appendo params env^ env^^)
-         (parse-env-listo body body^ env^^)
-         (begino body^ body^^)
-         (allocato vars^ body^^ body^^^)
-         (assigno params body^^^ body^^^^)
-         ))
+      (== expr `(object . ,field-bindings))
+      (== jexpr (jall (jset (jobj (list (cons (jstr "private") (jobj `()))))
+                            (jstr "public")
+                            public-jexpr)))
+      (parse-obj-bindingso field-bindings public-jexpr env)))
+   ;; function definition (Section 3.2.3)
+   ((fresh (params
+            body-stmts ; javascript statements
+            body-jexprs ; a list of LambdaJS expressions
+            body-jexpr ; a single LambdaJS begin expression
+            body-jexpr/vars
+            body-jexpr/vars+params
+            vars
+            hoisted-vars
+            env/hoisted-vars
+            env/vars+params
+            return-var)
+      (== expr `(function ,params . ,body-stmts))
+      (== jexpr
+          (jall (jset (jobj `((,(jstr "public") . ,(jobj `()))))
+                      (jstr "private")
+                      (jset (jobj `())
+                            (jstr "call")
+                            (jfun params
+                                  (jcatch `return
+                                          (jbeg body-jexpr/vars+params (jundef))
+                                          'result
+                                          (jvar 'result)))))))
+      (hoist-var-listo body-stmts vars)
+      (differenceo vars params hoisted-vars)
+      (appendo hoisted-vars env env/hoisted-vars)
+      (appendo params env/hoisted-vars env/vars+params)
+      (parse-env-listo body-stmts body-jexprs env/vars+params)
+      (begino body-jexprs body-jexpr)
+      (allocateo hoisted-vars body-jexpr body-jexpr/vars)
+      (assigno params body-jexpr/vars body-jexpr/vars+params)))
    ;; Comma expression sequencing
    ((fresh (exps exps^)
            (== expr `(comma . ,exps))
@@ -227,6 +240,7 @@
                  (== jexpr (jget (jget obj^ (jstr "public")) val^))
                  (parse-expr-env-listo `(,obj ,val) `(,obj^ ,val^) env)))))
 
+; object {...}
 (define (parse-obj-bindingso field-bindings obj-jexpr env)
   (conde ((== field-bindings `())
           (== obj-jexpr (jobj `())))
@@ -236,17 +250,16 @@
             (parse-expr-envo val-expr val-jexpr env)
             (parse-obj-bindingso rest-bindings prev-obj-jexpr env)))))
 
-(define (differenceo list1 list2 result)
-  (conde ((== list1 `())
-          (== result list1))
-         ((fresh (el rest result^)
-                 (== list1 `(,el . ,rest))
-                 (conde ((== result `(,el . ,result^))
-                         (not-in-listo el list2)
-                         (differenceo rest list2 result^))
-                        ((membero el list2)
-                         (differenceo rest list2 result)))
-                 ))))
+; list (set) difference operation
+(define (differenceo items toremove remaining)
+  (conde ((== items `()) (== remaining items))
+         ((fresh (el rest remaining-rest)
+            (== items `(,el . ,rest))
+            (conde ((== remaining `(,el . ,remaining-rest))
+                    (not-in-listo el toremove)
+                    (differenceo rest toremove remaining-rest))
+                   ((membero el toremove)
+                    (differenceo rest toremove remaining)))))))
 
 (define (leto vars cont jexpr)
   (fresh (k v rest let-rest)
@@ -315,14 +328,14 @@
                 ((== stmt `(:= . ,x)))))
   )
 
-(define (hoist-var-listo exp-list vars)
-  (conde ((== exp-list `()) (== vars `()))
-         ((fresh (e erest v vrest)
-                 (== exp-list `(,e . ,erest))
-                 (hoist-varo e v)
-                 (hoist-var-listo erest vrest)
-                 (appendo v vrest vars))
-          )))
+
+(define (hoist-var-listo stmts vars)
+  (conde ((== stmts `()) (== vars `()))
+         ((fresh (stmt stmts-rest vars-first vars-rest)
+            (== stmts `(,stmt . ,stmts-rest))
+            (hoist-varo stmt vars-first)
+            (hoist-var-listo stmts-rest vars-rest)
+            (appendo vars-first vars-rest vars)))))
 
 (define (hoist-pairso vars pairs)
   (conde ((== vars `()) (== pairs `()))
@@ -356,12 +369,12 @@
                  (pair-assigno rest cont env)
                  ))))
 
-(define (allocato list cont out)
+(define (allocateo list cont out)
   (conde ((== list `()) (== out cont))
          ((fresh (a rest rest-padded)
                  (== list `(,a . ,rest))
                  (== out (jlet a (jall (jundef)) rest-padded))
-                 (allocato rest cont rest-padded)))))
+                 (allocateo rest cont rest-padded)))))
 
 (define (assigno list cont out)
   (conde ((== list `()) (== out cont))
