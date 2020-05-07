@@ -76,7 +76,7 @@
     ((fresh (obj-expr obj-bindings obj-bindings^
              key-expr key-val rhs-expr rhs-val value^)
        (== expr (jset obj-expr key-expr rhs-expr))
-       (eval-env-listo `(,obj-expr ,key-expr,rhs-expr) env value^ store store~
+       (eval-env-listo `(,obj-expr ,key-expr ,rhs-expr) env value^ store store~
                        next-address next-address~)
        (effect-propagateo value^ value store~ store~ next-address~ next-address~
          (== value^ (value-list `(,(jobj obj-bindings) ,key-val ,rhs-val)))
