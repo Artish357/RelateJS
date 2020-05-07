@@ -138,4 +138,36 @@
                code)
              (evalo code res store)))
          `(,(jnum 5)))
-)
+  (test= "Basic try/catch/finally"
+         (run* (res)
+                              (fresh (code store)
+                                     (parseo/readable
+                                      '(call
+                                        (function (x)
+                                                  (try 10 catch e 11 finally 13)
+                                                  (return x))
+                                        1024)
+                                      code)
+                                     (evalo code res store)
+                                     ))
+         `(,(jnum 1024))
+         )
+  (test= "Basic try/catch/finally with internal statements"
+         (run* (res)
+               (fresh (store code)
+                      (parseo/readable
+                       '(call
+                         (function (x)
+                                   (try (throw x)
+                                        catch e
+                                        (var (err (op + e 10)))
+                                        finally
+                                        (var (fin (op * 2 err))))
+                                   (return fin))
+                         1024)
+                       code)
+                      (evalo code res store)
+                      ))
+         `(,(jnum 2068))
+         )
+  )
