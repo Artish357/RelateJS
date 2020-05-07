@@ -90,7 +90,7 @@
        (== stmt `(try ,try-stmt
                   catch ,catch-var ,catch-stmt
                   finally ,finally-stmt))
-       (== jexpr (jbeg (jcatch `error try-jexpr catch-var catch-jexpr)
+       (== jexpr (jbeg (jcatch `error try-jexpr catch-var (jlet catch-var (jall (jvar catch-var)) catch-jexpr))
                        (jbeg finally-jexpr (jundef))))
        (== catch-env `(,catch-var . ,env))
        (parse-envo try-stmt try-jexpr env)
