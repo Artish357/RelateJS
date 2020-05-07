@@ -104,5 +104,6 @@
 
 (define (membero item lst)
   (fresh (first rest)
-         (== lst `(,first . ,rest))
-         (conde ((== first item)) ((membero item rest)))))
+    (== lst `(,first . ,rest))
+    (conde ((== first item))
+           ((=/= first item) (membero item rest)))))
