@@ -57,7 +57,7 @@
                        next-address next-address^)
        (effect-propagateo value^ value store^ store~ next-address^ next-address~
          (== value^ (value-list `(,(jclo params body cenv) . ,args)))
-         (zipo param-arg-bindings params args)
+         (zipo params args param-arg-bindings)
          (appendo param-arg-bindings cenv cenv^)
          (eval-envo body cenv^ value store^ store~
                     next-address^ next-address~))))

@@ -60,13 +60,13 @@
                  (== s `(,sel . ,srest))
                  (appendo srest t r^)))))
 
-(define (zipo l keys values)
-  (conde ((== keys `()) (== values `()) (== l `()))
-         ((fresh (k v l^ krest vrest)
-                 (== keys `(,k . ,krest))
-                 (== values `(,v . ,vrest))
-                 (== l `((,k . ,v) . ,l^))
-                 (zipo l^ krest vrest)))))
+(define (zipo as ds pairs)
+  (conde ((== as '()) (== ds '()) (== pairs '()))
+         ((fresh (a as-rest d ds-rest pairs-rest)
+            (== as `(,a . ,as-rest))
+            (== ds `(,d . ,ds-rest))
+            (== pairs `((,a . ,d) . ,pairs-rest))
+            (zipo as-rest ds-rest pairs-rest)))))
 
 (define (not-in-listo el list)
   (conde
