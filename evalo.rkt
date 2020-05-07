@@ -16,7 +16,7 @@
     ((== expr value)
      (== store store~)
      (== next-address next-address~)
-     (conde ((fresh (payload) (== expr (jnum payload))))
+     (conde ((fresh (payload) (== expr (jrawnum payload))))
             ((fresh (binds) (== expr (jobj binds))))
             ((fresh (b) (== expr (jbool b))))
             ((fresh (payload) (== expr (jrawstr payload))))
