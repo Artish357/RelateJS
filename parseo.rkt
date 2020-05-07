@@ -234,12 +234,13 @@
             (parse-expr-env-listo exprs-rest jexprs-rest env)))))
 
 ; object {...}
+;; TODO: LambdaJS should support object literals that evaluate field values
 (define (parse-obj-bindingso field-bindings obj-jexpr env)
   (conde ((== field-bindings `())
           (== obj-jexpr (jobj `())))
          ((fresh (field val-expr val-jexpr rest-bindings prev-obj-jexpr)
-            (== field-bindings `((,field ,val-expr) . ,rest-bindings))
-            (== obj-jexpr (jset prev-obj-jexpr field val-jexpr))
+            (== field-bindings `(((string ,field) ,val-expr) . ,rest-bindings))
+            (== obj-jexpr (jset prev-obj-jexpr `(string ,field) val-jexpr))
             (parse-expr-envo val-expr val-jexpr env)
             (parse-obj-bindingso rest-bindings prev-obj-jexpr env)))))
 
