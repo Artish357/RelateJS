@@ -208,37 +208,30 @@
       (begino body-jexprs body-jexpr)
       (allocateo hoisted-vars body-jexpr body-jexpr/vars)
       (assigno params body-jexpr/vars body-jexpr/vars+params)))
-   ;; Comma expression sequencing
+
+   ;; Comma expression sequencing (not in paper since we can't decide on a name)
    ((fresh (exps exps^)
            (== expr `(comma . ,exps))
            (parse-expr-env-listo exps exps^ env)
            (begino exps^ jexpr)))))
 
-(define (parse-env-listo lst jlst env)
-  (conde ((== lst `()) (== jlst `()))
-         ((fresh (p p^ rest rest^)
-                 (== lst `(,p . ,rest))
-                 (== jlst `(,p^ . ,rest^))
-                 (parse-envo p p^ env)
-                 (parse-env-listo rest rest^ env)
-                 ))))
+; Parse a list of statements
+(define (parse-env-listo stmts jexprs env)
+  (conde ((== stmts `()) (== jexprs `()))
+         ((fresh (stmt jexpr stmts-rest jexprs-rest)
+            (== stmts `(,stmt . ,stmts-rest))
+            (== jexprs `(,jexpr . ,jexprs-rest))
+            (parse-envo stmt jexpr env)
+            (parse-env-listo stmts-rest jexprs-rest env)))))
 
-(define (parse-expr-env-listo lst jlst env)
-  (conde ((== lst `()) (== jlst `()))
-         ((fresh (p p^ rest rest^)
-                 (== lst `(,p . ,rest))
-                 (== jlst `(,p^ . ,rest^))
-                 (parse-expr-envo p p^ env)
-                 (parse-expr-env-listo rest rest^ env)
-                 ))))
-
-
-(define (lh-parseo stmt jexpr env)
-  (conde ((symbolo stmt ) (== jexpr (jvar stmt )))
-         ((fresh (obj obj^ val val^)
-                 (== stmt `(@ ,obj ,val))
-                 (== jexpr (jget (jget obj^ (jstr "public")) val^))
-                 (parse-expr-env-listo `(,obj ,val) `(,obj^ ,val^) env)))))
+; Parse a list of expressions
+(define (parse-expr-env-listo exprs jexprs env)
+  (conde ((== exprs `()) (== jexprs `()))
+         ((fresh (expr jexpr exprs-rest jexprs-rest)
+            (== exprs `(,expr . ,exprs-rest))
+            (== jexprs `(,jexpr . ,jexprs-rest))
+            (parse-expr-envo expr jexpr env)
+            (parse-expr-env-listo exprs-rest jexprs-rest env)))))
 
 ; object {...}
 (define (parse-obj-bindingso field-bindings obj-jexpr env)
@@ -250,36 +243,17 @@
             (parse-expr-envo val-expr val-jexpr env)
             (parse-obj-bindingso rest-bindings prev-obj-jexpr env)))))
 
-; list (set) difference operation
-(define (differenceo items toremove remaining)
-  (conde ((== items `()) (== remaining items))
-         ((fresh (el rest remaining-rest)
-            (== items `(,el . ,rest))
-            (conde ((== remaining `(,el . ,remaining-rest))
-                    (not-in-listo el toremove)
-                    (differenceo rest toremove remaining-rest))
-                   ((membero el toremove)
-                    (differenceo rest toremove remaining)))))))
+; build nested LambdaJS begin out of a list of LambdaJS exprs
+(define (begino jexprs jexpr)
+  (conde ((== jexprs `()) (== jexpr (jundef)))
+         ((== jexprs `(,jexpr)))
+         ((fresh (first rest rest-jexpr)
+            (== jexprs`(,first . ,rest))
+            (=/= rest `())
+            (== jexpr (jbeg first rest-jexpr))
+            (begino rest rest-jexpr)))))
 
-(define (leto vars cont jexpr)
-  (fresh (k v rest let-rest)
-         (== vars `((,k . ,v) . ,rest))
-         (== jexpr (jlet k v let-rest))
-         (conde ((== rest `())
-                 (== let-rest cont))
-                ((=/= rest `())
-                 (leto rest cont let-rest)))))
-
-(define (begino lst jexpr)
-  (conde ((== lst `()) (== jexpr (jundef)))
-         ((== lst `(,jexpr)))
-         ((fresh (a rest rest-exp)
-                 (== lst `(,a . ,rest))
-                 (=/= rest `())
-                 (== jexpr (jbeg a rest-exp))
-                 (begino rest rest-exp)
-                 ))))
-
+; Hoist variable declarations out of a statement
 (define (hoist-varo stmt vars)
   (conde ((== vars `())
           (fresh (x) (conde ((== stmt `(return ,x)))
@@ -327,7 +301,6 @@
                 ((== stmt `(@ . ,x)))
                 ((== stmt `(:= . ,x)))))
   )
-
 
 (define (hoist-var-listo stmts vars)
   (conde ((== stmts `()) (== vars `()))
@@ -383,10 +356,23 @@
                  (== out (jlet a (jall (jvar a)) rest-padded))
                  (assigno rest cont rest-padded)))))
 
-(define/match (mknum->num x)
-  [((list)) 0]
-  [((cons d rest)) (+ d (* 2 (mknum->num rest)))]
-  [(_) (begin x)])
+; list (set) difference operation
+(define (differenceo items toremove remaining)
+  (conde ((== items `()) (== remaining items))
+         ((fresh (el rest remaining-rest)
+            (== items `(,el . ,rest))
+            (conde ((== remaining `(,el . ,remaining-rest))
+                    (not-in-listo el toremove)
+                    (differenceo rest toremove remaining-rest))
+                   ((membero el toremove)
+                    (differenceo rest toremove remaining)))))))
+
+(define/match (humanize stmt )
+  [((list `string x)) (list->string (map (compose integer->char mknum->num) x))]
+  [((list `number x)) (mknum->num x)]
+  [((list)) `()]
+  [((? list?)) (cons (humanize (car stmt )) (humanize (cdr stmt )))]
+  [(_) stmt ])
 
 (define/match (dehumanize stmt )
   [((? string?)) (jstr stmt )]
@@ -395,10 +381,9 @@
   [((? list?)) (cons (dehumanize (car stmt )) (dehumanize (cdr stmt )))]
   [(_) stmt ])
 
-(define/match (humanize stmt )
-  [((list `string x)) (list->string (map (compose integer->char mknum->num) x))]
-  [((list `number x)) (mknum->num x)]
-  [((list)) `()]
-  [((? list?)) (cons (humanize (car stmt )) (humanize (cdr stmt )))]
-  [(_) stmt ])
+(define/match (mknum->num x)
+  [((list)) 0]
+  [((cons d rest)) (+ d (* 2 (mknum->num rest)))]
+  [(_) (begin x)])
+
 
