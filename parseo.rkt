@@ -126,22 +126,36 @@
    ((fresh (lhs-expr rhs-expr rhs-jexpr)
       (== expr `(:= ,lhs-expr ,rhs-expr))
       (conde ((symbolo lhs-expr)
-              (== jexpr (jassign (jvar lhs-expr) rhs-jexpr)))
-             ((fresh (obj-expr obj-jexpr key-expr key-jexpr new-obj-var)
+              (== jexpr (jassign (jvar lhs-expr) rhs-jexpr))
+              (parse-expr-envo rhs-expr rhs-jexpr env))
+             ((fresh (obj-expr obj-jexpr obj-var key-expr key-jexpr key-var
+                      rhs-var env/obj env/obj+key)
                 (== lhs-expr `(@ ,obj-expr ,key-expr))
-                (symbolo new-obj-var)
-                (not-in-listo new-obj-var env)
-                (== jexpr (jbeg
-                            (jlet
-                              new-obj-var
-                              (jset (jderef obj-jexpr) (jstr "public")
-                                    (jset (jget (jderef obj-jexpr) (jstr "public"))
-                                          key-jexpr rhs-jexpr))
-                              (jassign obj-jexpr (jvar new-obj-var)))
-                            rhs-jexpr))
+                (== jexpr
+                    (jlet
+                      obj-var obj-jexpr
+                      (jlet
+                        key-var key-jexpr
+                        (jlet
+                          rhs-var rhs-jexpr
+                          (jbeg (jassign
+                                  (jvar obj-var)
+                                  (jset (jderef (jvar obj-var)) (jstr "public")
+                                        (jset (jget (jderef (jvar obj-var))
+                                                    (jstr "public"))
+                                              (jvar key-var) (jvar rhs-var))))
+                                (jvar rhs-var))))))
+                (symbolo obj-var)
+                (symbolo key-var)
+                (symbolo rhs-var)
+                (== env/obj     `(,obj-var . ,env))
+                (== env/obj+key `(,key-var . ,env/obj))
+                (not-in-listo obj-var env)
+                (not-in-listo key-var env/obj)
+                (not-in-listo rhs-var env/obj+key)
                 (parse-expr-envo obj-expr obj-jexpr env)
-                (parse-expr-envo key-expr key-jexpr env))))
-      (parse-expr-envo rhs-expr rhs-jexpr env)))
+                (parse-expr-envo key-expr key-jexpr env/obj)
+                (parse-expr-envo rhs-expr rhs-jexpr env/obj+key))))))
    ;; object field access (Section 3.2.2)
    ((fresh (obj-expr obj-jexpr field-expr field-jexpr)
       (== expr `(@ ,obj-expr ,field-expr))
