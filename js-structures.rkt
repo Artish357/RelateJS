@@ -5,8 +5,8 @@
          jif jundef jnul jwhile jbrk jthrow jfin jcatch
          jdelta jrawstr jstr jnul)
 
-(define (jlet key value exp)
-  `(let ,key ,value ,exp))
+(define (jlet bindings expr)
+  `(let ,bindings ,expr))
 
 (define (jfun params body)
   `(fun ,params ,body))

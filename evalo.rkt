@@ -23,16 +23,21 @@
             ((== expr (jundef)))
             ((== expr (jnul)))))
     ;; Let expressions (Section 2.2.2)
-    ((fresh (lhs-var          ; variable being bound
-             rhs-expr rhs-val ; right-hand side expression & value
-             store^ next-address^ ; store produced by evaluating the rhs
+    ((fresh (binding-exprs               ; let-binding pairs
+             binding-vals                ; evaluated let-binding pairs
+             lhs-vars                    ; variables being bound
+             rhs-exprs rhs-vals          ; right-hand side expressions & values
+             value^ store^ next-address^ ; produced by evaluating the rhs-exprs
              body
              let-env)         ; environment after the let binding
-       (== expr (jlet lhs-var rhs-expr body))
-       (eval-envo rhs-expr env rhs-val store store^ next-address next-address^)
-       (effect-propagateo rhs-val value store^ store~
-                          next-address^ next-address~
-         (== let-env `((,lhs-var . ,rhs-val) . ,env))
+       (== expr (jlet binding-exprs body))
+       (zipo lhs-vars rhs-exprs binding-exprs)
+       (eval-env-listo rhs-exprs env value^ store store^
+                       next-address next-address^)
+       (effect-propagateo value^ value store^ store~ next-address^ next-address~
+         (== value^ (value-list rhs-vals))
+         (zipo lhs-vars rhs-vals binding-vals)
+         (appendo binding-vals env let-env)
          (eval-envo body let-env value store^ store~
                     next-address^ next-address~))))
     ;; Immutable variable lookup (Section 2.2.2)

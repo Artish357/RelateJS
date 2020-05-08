@@ -70,7 +70,8 @@
        (== stmt `(try ,try-stmt catch ,catch-var ,catch-stmt))
        (== jexpr
            (jbeg (jcatch `error try-jexpr catch-var
-                         (jlet catch-var (jall (jvar catch-var)) catch-jexpr))
+                         (jlet `((,catch-var . ,(jall (jvar catch-var))))
+                               catch-jexpr))
                  (jundef)))
        (parseo try-stmt try-jexpr)
        (parseo catch-stmt catch-jexpr)))
@@ -87,7 +88,9 @@
        (== stmt `(try ,try-stmt
                   catch ,catch-var ,catch-stmt
                   finally ,finally-stmt))
-       (== jexpr (jbeg (jcatch `error try-jexpr catch-var (jlet catch-var (jall (jvar catch-var)) catch-jexpr))
+       (== jexpr (jbeg (jcatch `error try-jexpr catch-var
+                               (jlet `((,catch-var . ,(jall (jvar catch-var))))
+                                     catch-jexpr))
                        (jbeg finally-jexpr (jundef))))
        (parseo try-stmt try-jexpr)
        (parseo catch-stmt catch-jexpr)
@@ -317,14 +320,14 @@
   (conde ((== list `()) (== out cont))
          ((fresh (a rest rest-padded)
                  (== list `(,a . ,rest))
-                 (== out (jlet a (jall (jundef)) rest-padded))
+                 (== out (jlet `((,a . ,(jall (jundef)))) rest-padded))
                  (allocateo rest cont rest-padded)))))
 
 (define (assigno list cont out)
   (conde ((== list `()) (== out cont))
          ((fresh (a b rest -rest rest-padded)
                  (== list `(,a . ,rest))
-                 (== out (jlet a (jall (jvar a)) rest-padded))
+                 (== out (jlet `((,a . ,(jall (jvar a)))) rest-padded))
                  (assigno rest cont rest-padded)))))
 
 ; list (set) difference operation
