@@ -17,6 +17,7 @@
      (== store store~)
      (== next-address next-address~)
      (conde ((fresh (payload) (== expr (jrawnum payload))))
+            ((fresh (bindings) (== expr (jobj bindings))))
             ((fresh (b) (== expr (jbool b))))
             ((fresh (payload) (== expr (jrawstr payload))))
             ((== expr (jundef)))
@@ -60,17 +61,6 @@
          (appendo param-arg-bindings cenv cenv^)
          (eval-envo body cenv^ value store^ store~
                     next-address^ next-address~))))
-    ;; Object literals (Section 2.2.4)
-    ((fresh (binding-exprs field-names rhs-exprs value^
-             binding-values rhs-values)
-       (== expr `(object ,binding-exprs))
-       (zipo field-names rhs-exprs binding-exprs)
-       (eval-env-listo rhs-exprs env value^ store store~
-                       next-address next-address~)
-       (effect-propagateo value^ value store~ store~ next-address~ next-address~
-         (== value^ (value-list rhs-values))
-         (== value `(object ,binding-values))
-         (zipo field-names rhs-values binding-values))))
     ;; Object field retrieval (2.2.4)
     ((fresh (obj-expr obj-bindings key-expr key-val value^)
        (== expr (jget obj-expr key-expr))
