@@ -18,6 +18,14 @@
   (conde
     ; expressions have a helper for their own
     ((parse-expro stmt jexpr))
+    ; variable declaration (Section 3.2.1)
+    ((fresh (vars bindings assignments-jexpr)
+       (== stmt `(var . ,vars))
+       (hoist-pairso vars bindings)
+       (conde ((== bindings `()) (== jexpr (jundef)))
+              ((== jexpr (jbeg assignments-jexpr (jundef)))
+               (=/= bindings `())
+               (pair-assigno bindings assignments-jexpr)))))
     ; begin statement (Section 3.2.7)
     ((fresh (stmts jexprs begin-jexpr)
        (== stmt `(begin . ,stmts))
@@ -30,14 +38,6 @@
        (== jexpr (jbeg (jif cond-jexpr then-jexpr else-jexpr) (jundef)))
        (parse-expro cond-expr cond-jexpr)
        (parse-listo `(,then-stmt ,else-stmt) `(,then-jexpr ,else-jexpr))))
-    ; variable declaration (Section 3.2.1)
-    ((fresh (vars bindings assignments-jexpr)
-       (== stmt `(var . ,vars))
-       (hoist-pairso vars bindings)
-       (conde ((== bindings `()) (== jexpr (jundef)))
-              ((== jexpr (jbeg assignments-jexpr (jundef)))
-               (=/= bindings `())
-               (pair-assigno bindings assignments-jexpr)))))
     ; for loops (Section 3.2.7)
     ((fresh (init-stmt init-jexpr
              cond-expr cond-jexpr
@@ -157,7 +157,6 @@
                       arg-jexprs))
       (parse-expro func-expr func-jexpr)
       (parse-expr-listo arg-exprs arg-jexprs)))
-
    ;; object creation (Section 3.2.4)
    ((fresh (binding-exprs public-jexpr)
       (== expr `(object . ,binding-exprs))
