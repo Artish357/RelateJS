@@ -1,13 +1,13 @@
 #lang racket
 (require "js-structures.rkt" "faster-miniKanren/mk.rkt" "evalo.rkt" "helpers.rkt")
-(provide hoist-varo humanize dehumanize parseo/readable parseo)
+(provide hoist-varo humanize dehumanize parseo/readable parse-topo)
 
 ; Parse a JavaScript statement with human-readable literals
 (define (parseo/readable stmt jexpr)
-  (parseo (dehumanize stmt) jexpr))
+  (parse-topo (dehumanize stmt) jexpr))
 
 ; Parse a JavaScript statement with relational number and string literals
-(define (parseo stmt jexpr)
+(define (parse-topo stmt jexpr)
   (fresh (vars exp^ allocations body)
          (hoist-varo stmt vars)
          (allocateo vars body jexpr)
