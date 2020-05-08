@@ -1,37 +1,35 @@
 #lang racket
 (require "js-structures.rkt" "faster-miniKanren/mk.rkt" "evalo.rkt" "helpers.rkt")
-(provide hoist-varo humanize dehumanize parseo/readable parseo)
+(provide hoist-varo humanize dehumanize parseo/readable parse-topo)
 
 ; Parse a JavaScript statement with human-readable literals
 (define (parseo/readable stmt jexpr)
-  (parseo (dehumanize stmt) jexpr))
+  (parse-topo (dehumanize stmt) jexpr))
 
 ; Parse a JavaScript statement with relational number and string literals
-(define (parseo stmt jexpr)
+(define (parse-topo stmt jexpr)
   (fresh (vars exp^ allocations body)
          (hoist-varo stmt vars)
          (allocateo vars body jexpr)
-         (parse-envo stmt body vars)))
+         (parseo stmt body)))
 
-; Parse a JavaScript statement to LambdaJS expression passing the env
-(define (parse-envo stmt jexpr env)
+; Parse a JavaScript statement to LambdaJS expression
+(define (parseo stmt jexpr)
   (conde
     ; expressions have a helper for their own
-    ((parse-expr-envo stmt jexpr env))
+    ((parse-expro stmt jexpr))
     ; begin statement (Section 3.2.7)
     ((fresh (stmts jexprs begin-jexpr)
        (== stmt `(begin . ,stmts))
        (== jexpr (jbeg begin-jexpr (jundef)))
-       (parse-env-listo stmts jexprs env)
+       (parse-listo stmts jexprs)
        (begino jexprs begin-jexpr)))
     ; if statement  (Section 3.2.7)
     ((fresh (cond-expr then-stmt else-stmt cond-jexpr then-jexpr else-jexpr)
        (== stmt `(if ,cond-expr ,then-stmt ,else-stmt))
        (== jexpr (jbeg (jif cond-jexpr then-jexpr else-jexpr) (jundef)))
-       (parse-expr-envo cond-expr cond-jexpr env)
-       (parse-env-listo `(,then-stmt ,else-stmt)
-                        `(,then-jexpr ,else-jexpr)
-                        env)))
+       (parse-expro cond-expr cond-jexpr)
+       (parse-listo `(,then-stmt ,else-stmt) `(,then-jexpr ,else-jexpr))))
     ; variable declaration (Section 3.2.1)
     ((fresh (vars bindings assignments-jexpr)
        (== stmt `(var . ,vars))
@@ -39,7 +37,7 @@
        (conde ((== bindings `()) (== jexpr (jundef)))
               ((== jexpr (jbeg assignments-jexpr (jundef)))
                (=/= bindings `())
-               (pair-assigno bindings assignments-jexpr env)))))
+               (pair-assigno bindings assignments-jexpr)))))
     ; for loops (Section 3.2.7)
     ((fresh (init-stmt init-jexpr
              cond-expr cond-jexpr
@@ -51,61 +49,59 @@
                                (jwhile cond-jexpr (jbeg body-jexpr inc-jexpr))
                                `e
                                (jundef))))
-       (parse-expr-env-listo `(,cond-expr ,inc-expr) `(,cond-jexpr ,inc-jexpr) env)
-       (parse-envo init-stmt init-jexpr env)
-       (parse-env-listo body-stmts body-jexprs env)
+       (parse-expr-listo `(,cond-expr ,inc-expr) `(,cond-jexpr ,inc-jexpr))
+       (parseo init-stmt init-jexpr)
+       (parse-listo body-stmts body-jexprs)
        (begino body-jexprs body-jexpr)))
     ; return control effect (Section 3.2.8)
     ((fresh (val-expr val-jexpr)
        (== stmt `(return ,val-expr))
        (== jexpr (jthrow `return val-jexpr))
-       (parse-expr-envo val-expr val-jexpr env)))
+       (parse-expro val-expr val-jexpr)))
     ; throw control effect (Section 3.2.8)
     ((fresh (val-expr val-jexpr)  ;; throw
        (== stmt `(throw ,val-expr))
        (== jexpr (jthrow `error val-jexpr))
-       (parse-expr-envo val-expr val-jexpr env)))
+       (parse-expro val-expr val-jexpr)))
     ; break control effect (Section 3.2.8)
     ((== stmt `(break)) (== jexpr (jthrow `break (jundef))))
     ; try/catch control effect (Section 3.2.8)
-    ((fresh (try-stmt try-jexpr catch-stmt catch-jexpr catch-var catch-env)
+    ((fresh (try-stmt try-jexpr catch-stmt catch-jexpr catch-var)
        (== stmt `(try ,try-stmt catch ,catch-var ,catch-stmt))
        (== jexpr
            (jbeg (jcatch `error try-jexpr catch-var
                          (jlet catch-var (jall (jvar catch-var)) catch-jexpr))
                  (jundef)))
-       (== catch-env `(,catch-var . ,env))
-       (parse-envo try-stmt try-jexpr env)
-       (parse-envo catch-stmt catch-jexpr catch-env)))
+       (parseo try-stmt try-jexpr)
+       (parseo catch-stmt catch-jexpr)))
     ; try/finally control effect (Section 3.2.8)
     ((fresh (try-stmt try-jexpr finally-stmt finally-jexpr)
        (== stmt `(try ,try-stmt finally ,finally-stmt))
        (== jexpr (jfin try-jexpr (jbeg finally-jexpr (jundef))))
-       (parse-envo try-stmt try-jexpr env)
-       (parse-envo finally-stmt finally-jexpr env)))
+       (parseo try-stmt try-jexpr)
+       (parseo finally-stmt finally-jexpr)))
     ; try/catch/finally control effect (Section 3.2.8)
     ((fresh (try-stmt try-jexpr
-             catch-stmt catch-jexpr catch-var catch-env
+             catch-stmt catch-jexpr catch-var
              finally-stmt finally-jexpr)
        (== stmt `(try ,try-stmt
                   catch ,catch-var ,catch-stmt
                   finally ,finally-stmt))
        (== jexpr (jbeg (jcatch `error try-jexpr catch-var (jlet catch-var (jall (jvar catch-var)) catch-jexpr))
                        (jbeg finally-jexpr (jundef))))
-       (== catch-env `(,catch-var . ,env))
-       (parse-envo try-stmt try-jexpr env)
-       (parse-envo catch-stmt catch-jexpr catch-env)
-       (parse-envo finally-stmt finally-jexpr env)))
+       (parseo try-stmt try-jexpr)
+       (parseo catch-stmt catch-jexpr)
+       (parseo finally-stmt finally-jexpr)))
     ; while statements (Section 3.2.7)
     ((fresh (cond-expr cond-jexpr body-stmts body-jexprs body-jexpr)
        (== stmt `(while ,cond-expr . ,body-stmts))
        (== jexpr (jcatch `break (jwhile cond-jexpr body-jexpr) `e (jundef)))
-       (parse-expr-envo cond-expr cond-jexpr env)
-       (parse-env-listo body-stmts body-jexprs env)
+       (parse-expro cond-expr cond-jexpr)
+       (parse-listo body-stmts body-jexprs)
        (begino body-jexprs body-jexpr)))))
 
-; Parse a JavaScript expression to LambdaJS expression passing the env
-(define (parse-expr-envo expr jexpr env)
+; Parse a JavaScript expression to LambdaJS expression
+(define (parse-expro expr jexpr)
   (conde
    ;; variables (Section 3.2.1)
    ((symbolo expr ) (== jexpr (jderef (jvar expr ))))
@@ -121,61 +117,50 @@
    ((fresh (rator rands rand-jexprs)
       (== expr `(op ,rator . ,rands))
       (== jexpr (jdelta rator rand-jexprs))
-      (parse-expr-env-listo rands rand-jexprs env)))
+      (parse-expr-listo rands rand-jexprs)))
    ;; assignments (Section 3.2.6)
    ((fresh (lhs-expr rhs-expr rhs-jexpr)
       (== expr `(:= ,lhs-expr ,rhs-expr))
       (conde ((symbolo lhs-expr)
               (== jexpr (jassign (jvar lhs-expr) rhs-jexpr))
-              (parse-expr-envo rhs-expr rhs-jexpr env))
-             ((fresh (obj-expr obj-jexpr obj-var key-expr key-jexpr key-var
-                      rhs-var env/obj env/obj+key)
+              (parse-expro rhs-expr rhs-jexpr))
+             ((fresh (obj-expr obj-jexpr key-expr key-jexpr)
                 (== lhs-expr `(@ ,obj-expr ,key-expr))
                 (== jexpr
-                    (jlet
-                      obj-var obj-jexpr
-                      (jlet
-                        key-var key-jexpr
-                        (jlet
-                          rhs-var rhs-jexpr
-                          (jbeg (jassign
-                                  (jvar obj-var)
-                                  (jset (jderef (jvar obj-var)) (jstr "public")
-                                        (jset (jget (jderef (jvar obj-var))
-                                                    (jstr "public"))
-                                              (jvar key-var) (jvar rhs-var))))
-                                (jvar rhs-var))))))
-                (symbolo obj-var)
-                (symbolo key-var)
-                (symbolo rhs-var)
-                (== env/obj     `(,obj-var . ,env))
-                (== env/obj+key `(,key-var . ,env/obj))
-                (not-in-listo obj-var env)
-                (not-in-listo key-var env/obj)
-                (not-in-listo rhs-var env/obj+key)
-                (parse-expr-envo obj-expr obj-jexpr env)
-                (parse-expr-envo key-expr key-jexpr env/obj)
-                (parse-expr-envo rhs-expr rhs-jexpr env/obj+key))))))
+                    (japp (jfun '(obj key rhs)
+                                (jbeg (jassign
+                                        (jvar 'obj)
+                                        (jset (jderef (jvar 'obj))
+                                              (jstr "public")
+                                              (jset (jget (jderef (jvar 'obj))
+                                                          (jstr "public"))
+                                                    (jvar 'key) (jvar 'rhs))))
+                                      (jvar 'rhs)))
+                          (list obj-jexpr key-jexpr rhs-jexpr)))
+                (parse-expro obj-expr obj-jexpr)
+                (parse-expro key-expr key-jexpr)
+                (parse-expro rhs-expr rhs-jexpr))))))
    ;; object field access (Section 3.2.2)
    ((fresh (obj-expr obj-jexpr field-expr field-jexpr)
       (== expr `(@ ,obj-expr ,field-expr))
       (== jexpr (jget (jget (jderef obj-jexpr) (jstr "public")) field-jexpr))
-      (parse-expr-envo obj-expr obj-jexpr env)
-      (parse-expr-envo field-expr field-jexpr env)))
+      (parse-expro obj-expr obj-jexpr)
+      (parse-expro field-expr field-jexpr)))
    ;; Function call (Section 3.2.4)
    ((fresh (func-expr func-jexpr arg-exprs arg-jexprs)
       (== expr `(call ,func-expr . ,arg-exprs))
       (== jexpr (japp (jget (jget (jderef func-jexpr) (jstr "private"))
                             (jstr "call"))
                       arg-jexprs))
-      (parse-expr-envo func-expr func-jexpr env)
-      (parse-expr-env-listo arg-exprs arg-jexprs env)))
+      (parse-expro func-expr func-jexpr)
+      (parse-expr-listo arg-exprs arg-jexprs)))
+
    ;; object creation (Section 3.2.4)
-   ((fresh (binding-exprs binding-jexprs)
+   ((fresh (binding-exprs public-jexpr)
       (== expr `(object . ,binding-exprs))
-      (== jexpr (jall (jobj `((,(jstr "private") . ,(jobj '()))
-                              (,(jstr "public")  . ,(jobj binding-jexprs))))))
-      (parse-obj-bindingso binding-exprs binding-jexprs env)))
+      (== jexpr (jall (jset (jobj `((,(jstr "private") . ,(jobj '()))))
+                            (jstr "public") public-jexpr)))
+      (parse-obj-bindingso binding-exprs public-jexpr)))
    ;; function definition (Section 3.2.3)
    ((fresh (params
             body-stmts ; javascript statements
@@ -185,24 +170,20 @@
             body-jexpr/vars+params
             vars
             hoisted-vars
-            env/hoisted-vars
-            env/vars+params
             return-var)
       (== expr `(function ,params . ,body-stmts))
       (== jexpr
-          (jall (jobj `((,(jstr "public") . ,(jobj '()))
-                        (,(jstr "private")
-                          . ,(jobj `((,(jstr "call")
-                                       . ,(jfun params
-                                                (jcatch 'return
-                                                        (jbeg body-jexpr/vars+params (jundef))
-                                                        'result
-                                                        (jvar 'result)))))))))))
+          (jall (jset (jobj `((,(jstr "public") . ,(jobj '()))))
+                      (jstr "private")
+                      (jset (jobj '()) (jstr "call")
+                            (jfun params
+                                  (jcatch 'return
+                                          (jbeg body-jexpr/vars+params (jundef))
+                                          'result
+                                          (jvar 'result)))))))
       (hoist-var-listo body-stmts vars)
       (differenceo vars params hoisted-vars)
-      (appendo hoisted-vars env env/hoisted-vars)
-      (appendo params env/hoisted-vars env/vars+params)
-      (parse-env-listo body-stmts body-jexprs env/vars+params)
+      (parse-listo body-stmts body-jexprs)
       (begino body-jexprs body-jexpr)
       (allocateo hoisted-vars body-jexpr body-jexpr/vars)
       (assigno params body-jexpr/vars body-jexpr/vars+params)))
@@ -210,35 +191,37 @@
    ;; Comma expression sequencing (not in paper since we can't decide on a name)
    ((fresh (exps exps^)
            (== expr `(comma . ,exps))
-           (parse-expr-env-listo exps exps^ env)
+           (parse-expr-listo exps exps^)
            (begino exps^ jexpr)))))
 
 ; Parse a list of statements
-(define (parse-env-listo stmts jexprs env)
+(define (parse-listo stmts jexprs)
   (conde ((== stmts `()) (== jexprs `()))
          ((fresh (stmt jexpr stmts-rest jexprs-rest)
             (== stmts `(,stmt . ,stmts-rest))
             (== jexprs `(,jexpr . ,jexprs-rest))
-            (parse-envo stmt jexpr env)
-            (parse-env-listo stmts-rest jexprs-rest env)))))
+            (parseo stmt jexpr)
+            (parse-listo stmts-rest jexprs-rest)))))
 
 ; Parse a list of expressions
-(define (parse-expr-env-listo exprs jexprs env)
+(define (parse-expr-listo exprs jexprs)
   (conde ((== exprs `()) (== jexprs `()))
          ((fresh (expr jexpr exprs-rest jexprs-rest)
             (== exprs `(,expr . ,exprs-rest))
             (== jexprs `(,jexpr . ,jexprs-rest))
-            (parse-expr-envo expr jexpr env)
-            (parse-expr-env-listo exprs-rest jexprs-rest env)))))
+            (parse-expro expr jexpr)
+            (parse-expr-listo exprs-rest jexprs-rest)))))
 
 ; object {...}
-(define (parse-obj-bindingso binding-exprs binding-jexprs env)
-  (conde ((== binding-exprs '()) (== binding-jexprs '()))
-         ((fresh (field val-expr val-jexpr binding-exprs-rest binding-jexprs-rest)
-            (== binding-exprs  `((,field   ,val-expr)  . ,binding-exprs-rest))
-            (== binding-jexprs `((,field . ,val-jexpr) . ,binding-jexprs-rest))
-            (parse-expr-envo val-expr val-jexpr env)
-            (parse-obj-bindingso binding-exprs-rest binding-jexprs-rest env)))))
+(define (parse-obj-bindingso binding-exprs obj-jexpr)
+  (conde ((== binding-exprs '()) (== obj-jexpr (jobj '())))
+         ((fresh (field-expr field-jexpr val-expr val-jexpr
+                  binding-exprs-rest obj-jexpr-rest)
+            (== binding-exprs  `((,field-expr ,val-expr) . ,binding-exprs-rest))
+            (== obj-jexpr (jset obj-jexpr-rest field-jexpr val-jexpr))
+            (parse-expro field-expr field-jexpr)
+            (parse-expro val-expr val-jexpr)
+            (parse-obj-bindingso binding-exprs-rest obj-jexpr-rest)))))
 
 ; build nested LambdaJS begin out of a list of LambdaJS exprs
 (define (begino jexprs jexpr)
@@ -319,17 +302,16 @@
                          (== name var)))
                  (hoist-nameso v-rest rest)))))
 
-(define (pair-assigno pairs jexpr env)
+(define (pair-assigno pairs jexpr)
   (fresh (var val val^ rest cont)
          (== pairs `((,var ,val) . ,rest))
          (symbolo var)
-         (parse-expr-envo val val^ env)
+         (parse-expro val val^)
          (conde ((== rest `())
                  (== jexpr (jassign (jvar var) val^)))
                 ((=/= rest `())
                  (== jexpr (jbeg (jassign (jvar var) val^) cont))
-                 (pair-assigno rest cont env)
-                 ))))
+                 (pair-assigno rest cont)))))
 
 (define (allocateo list cont out)
   (conde ((== list `()) (== out cont))

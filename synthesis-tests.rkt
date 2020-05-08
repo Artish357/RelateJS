@@ -19,16 +19,16 @@
                         (time expr))
                  output))
   (test= "4 quines"
-         (length (run 4 (r) (fresh (code store ) (evalo code r store) (parseo r code))))
+         (length (run 4 (r) (fresh (code store ) (evalo code r store) (parse-topo r code))))
          4)
   (test= "5 ways to say hello"
          (length (map humanize (run 5 (out store) (evalo out (jstr "Hello") store))))
          5)
   #;(test= "3 ways to code hello"
-         (length (run 3 (out) (fresh (code store) (parseo out code) (evalo code (jstr "Hello") store))))
+         (length (run 3 (out) (fresh (code store) (parse-topo out code) (evalo code (jstr "Hello") store))))
          3)
   (test= "6 ways to break down hello"
-         (length (run 5 (out) (fresh (code store) (parseo `(op . ,out) code)  (evalo code (jstr "Hello") store))))
+         (length (run 5 (out) (fresh (code store) (parse-topo `(op . ,out) code)  (evalo code (jstr "Hello") store))))
          5)
   (test= "Echo"
          (run 1 (out) (fresh (c1 c2 s1 s2)
