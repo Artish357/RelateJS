@@ -203,21 +203,6 @@
        (effect-propagateo value^ value store~ store~ next-address~ next-address~
          (== value^ (value-list args))
          (conde
-           ((fresh (v1) ; typeof
-              (== `(,rator (,v1)) `(typeof ,args))
-              (typeofo v1 value store~)))
-           ((fresh (str char) ; char->nat
-              (== `(,str) args)
-              (typeofo str (jstr "string") store~)
-              (== `(,(jrawstr `(,char))) args)
-              (== rator `char->nat)
-              (== value (jrawnum char))))
-           ((fresh (num digits) ; nat->char
-              (== `(,num) args)
-              (typeofo num (jstr "number") store~)
-              (== `(,(jrawnum digits)) args)
-              (== rator `nat->char)
-              (== value (jrawstr `(,digits)))))
            ((fresh (v1 v2) ; ===
               (== `(,rator ,args) `(=== (,v1 ,v2)))
               (conde ((== value (jbool #t)) (== v1 v2))
@@ -251,7 +236,22 @@
                       (== value (jrawstr result))
                       (appendo chars1 chars2 result))
                      ((== rator `string-<)
-                      (string-lesso chars1 chars2 value)))))))))))
+                      (string-lesso chars1 chars2 value)))))
+           ((fresh (v1) ; typeof
+              (== `(,rator (,v1)) `(typeof ,args))
+              (typeofo v1 value store~)))
+           ((fresh (str char) ; char->nat
+              (== `(,str) args)
+              (typeofo str (jstr "string") store~)
+              (== `(,(jrawstr `(,char))) args)
+              (== rator `char->nat)
+              (== value (jrawnum char))))
+           ((fresh (num digits) ; nat->char
+              (== `(,num) args)
+              (typeofo num (jstr "number") store~)
+              (== `(,(jrawnum digits)) args)
+              (== rator `nat->char)
+              (== value (jrawstr `(,digits)))))))))))
 
 ;; Sequentially evaluate a list of LambdaJS expressions
 (define (eval-env-listo exprs env vals store store~ next-address next-address~)
