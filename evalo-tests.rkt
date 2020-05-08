@@ -202,4 +202,26 @@
   (test= "Try/finally with return in finally"
          (run* (res) (evalo/ns (jfin (jthrow 'return (jnum 1)) (jthrow 'return (jnum 2))) res))
          `(,(jbrk 'return (jnum 2))))
+  (test= "While loop"
+         (run* (res) (evalo/ns (jlet `num (jall (jnum 1))
+                                     (jbeg (jwhile
+                                            (jdelta `< `(,(jderef (jvar `num)) ,(jnum 10)))
+                                            (jassign (jvar `num)
+                                                     (jdelta `+ `(,(jderef (jvar `num))
+                                                                  ,(jderef (jvar `num))))))
+                                           (jderef (jvar `num)))) res))
+         `(,(jnum 16)))
+  (test= "While loop with break"
+         (run* (res) (evalo/ns (jlet `num (jall (jnum 1))
+                                     (jcatch `break
+                                             (jwhile
+                                              (jbool #t)
+                                              (jif (jdelta `< `(,(jderef (jvar `num)) ,(jnum 10)))
+                                                   (jassign (jvar `num)
+                                                            (jdelta `+ `(,(jderef (jvar `num))
+                                                                         ,(jderef (jvar `num)))))
+                                                   (jthrow `break (jderef (jvar `num)))))
+                                             `break-var
+                                             (jvar `break-var))) res))
+         `(,(jnum 16)))
   )
