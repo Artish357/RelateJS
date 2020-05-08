@@ -151,8 +151,8 @@
                (jnum 42)
                (jstr "Hello")
                (jbool #f)
-               (jall (jobj `((,(jstr "private") . ,(jobj `((,(jstr "not-call") . ,(jfun '() (jundef)))))))))
-               (jall (jobj `((,(jstr "private") . ,(jobj `((,(jstr "call")     . ,(jfun '() (jundef)))))))))))
+               (jall (jset (jobj '()) (jstr "private") (jset (jobj '()) (jstr "not-call") (jfun '() (jundef)))))
+               (jall (jset (jobj '()) (jstr "private") (jset (jobj '()) (jstr "call")     (jfun '() (jundef)))))))
          (map (lambda (x) `(,(jstr x))) (list "undefined" "object" "number" "string" "boolean" "object" "function")))
   (test= "+"
          (run* (res) (fresh (store) (evalo/ns (jdelta `+ `(,(jnum 20) ,(jnum 10))) res)))
