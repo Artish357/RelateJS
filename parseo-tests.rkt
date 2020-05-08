@@ -17,6 +17,18 @@
   (test= "Hoist vars, nested functions"
          (run* (pairs) (hoist-varo `(begin (var (a 1) b (c (function (x) (var should-not-pop-up)))) (if () (var (q 3)) (var y))) pairs))
          '((a b c q y)))
+  (test= "Begin statement"
+         (run* (res)
+           (fresh (code store)
+             (parseo/readable
+              '(call (function ()
+                               (begin
+                                 (var (a 1) (b 2))
+                                 (var (c (op + a b)))
+                                 (return c))))
+               code)
+             (evalo code res store)))
+         `(,(jnum 3)))
   (test= "Object creation"
          (run* (r) (fresh (code i store)
                           (parseo/readable `(@ (object ("1" 1) ("2" 2)) "1") code)
@@ -168,6 +180,37 @@
                        code)
                       (evalo code res store)
                       ))
-         `(,(jnum 2068))
-         )
+         `(,(jnum 2068)))
+  (test= "While with break"
+         (run* (res)
+               (fresh (store code)
+                      (parseo/readable
+                       '(call
+                         (function (x)
+                                   (while #t
+                                     (if (op < x 10)
+                                         (:= x (op + x x))
+                                         (break)))
+                                   (return x))
+                         1)
+                       code)
+                      (evalo code res store)
+                      ))
+         `(,(jnum 16)))
+  (test= "For with break"
+         (run* (res)
+               (fresh (store code)
+                      (parseo/readable
+                       '(call
+                         (function (x)
+                                   (for (#t #t #t)
+                                     (if (op < x 10)
+                                         (:= x (op + x x))
+                                         (break)))
+                                   (return x))
+                         1)
+                       code)
+                      (evalo code res store)
+                      ))
+         `(,(jnum 16)))
   )
