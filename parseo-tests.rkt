@@ -43,6 +43,25 @@
   (test= "Object field updating"
          (map humanize (run* (r) (fresh (code store) (parseo/readable  `(call (function () (var (x (object ("3" 2)))) (:= (@ x "3") 3) (return (@ x "3")))) code) (evalo code r store))))
          '(3))
+  (test= "Object field updating with computed value"
+         (map humanize (run* (r) (fresh (code store) (parseo/readable
+                                                      `(call (function ()
+                                                                       (var (x (object ("3" 2)))
+                                                                            (f (function () (return 42))))
+                                                                       (:= (@ x "3") (call f))
+                                                                       (return (@ x "3")))) code)
+                                        (evalo code r store))))
+         '(42))
+
+  (test= "Object field updating with computed field"
+         (map humanize (run* (r) (fresh (code store) (parseo/readable
+                                                      `(call (function ()
+                                                                       (var (x (object ("3" 2)))
+                                                                            (f (function () (return "42"))))
+                                                                       (:= (@ x (call f)) 100)
+                                                                       (return (@ x (call f))))) code)
+                                        (evalo code r store))))
+         '(100))
   (test= "Human interface functions"
          (humanize (dehumanize (list 1 "hello" 1337)))
          (list 1 "hello" 1337))
