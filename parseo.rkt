@@ -16,6 +16,14 @@
 ; Parse a JavaScript statement to LambdaJS expression
 (define (parseo stmt jexpr)
   (conde
+    ; variable declaration (Section 3.2.1)
+    ((fresh (vars bindings assignments-jexpr)
+       (== stmt `(var . ,vars))
+       (hoist-pairso vars bindings)
+       (conde ((== bindings `()) (== jexpr (jundef)))
+              ((== jexpr (jbeg assignments-jexpr (jundef)))
+               (=/= bindings `())
+               (pair-assigno bindings assignments-jexpr)))))
     ; expressions have a helper for their own
     ((parse-expro stmt jexpr))
     ; begin statement (Section 3.2.7)
@@ -30,14 +38,6 @@
        (== jexpr (jbeg (jif cond-jexpr then-jexpr else-jexpr) (jundef)))
        (parse-expro cond-expr cond-jexpr)
        (parse-listo `(,then-stmt ,else-stmt) `(,then-jexpr ,else-jexpr))))
-    ; variable declaration (Section 3.2.1)
-    ((fresh (vars bindings assignments-jexpr)
-       (== stmt `(var . ,vars))
-       (hoist-pairso vars bindings)
-       (conde ((== bindings `()) (== jexpr (jundef)))
-              ((== jexpr (jbeg assignments-jexpr (jundef)))
-               (=/= bindings `())
-               (pair-assigno bindings assignments-jexpr)))))
     ; for loops (Section 3.2.7)
     ((fresh (init-stmt init-jexpr
              cond-expr cond-jexpr
@@ -235,7 +235,8 @@
 
 ; Hoist variable declarations out of a statement
 (define (hoist-varo stmt vars)
-  (conde ((fresh (x)
+  (conde ((fresh (x) (== stmt `(var . ,x)) (hoist-nameso x vars)))
+         ((fresh (x)
             (== vars `())  ;; These never embed var declarations
             (conde ((== stmt `(return ,x)))
                    ((== stmt `(throw ,x)))
@@ -254,7 +255,6 @@
                    ((== stmt `(op . ,x)))
                    ((== stmt `(@ . ,x)))
                    ((== stmt `(:= . ,x))))))
-         ((fresh (x) (== stmt `(var . ,x)) (hoist-nameso x vars)))
          ((fresh (try-stmt catch-stmt catch-var)
                  (== stmt `(try ,try-stmt catch ,catch-var ,catch-stmt))
                  (hoist-var-listo `(,try-stmt ,catch-stmt) vars)))
