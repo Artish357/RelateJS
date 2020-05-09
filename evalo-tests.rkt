@@ -2,7 +2,7 @@
 (require "evalo.rkt" "faster-miniKanren/mk.rkt" "js-structures.rkt")
 
 (define (evalo/ns exp val)
-  (fresh (next-address^ store) (eval-envo exp `() val `() store `() next-address^)))
+  (fresh (next-address^ store) (eval-envo exp '() val '() store '() next-address^)))
 
 (module+ test
   (require rackunit)
@@ -12,7 +12,7 @@
                         (time expr))
                  output))
   (let ([1to6zip (list (cons (jstr "1") (jnum 2)) (cons (jstr "3") (jnum 4)) (cons (jstr "5") (jnum 6)))]
-        [1to3 (map jnum `(1 2 3))])
+        [1to3 (map jnum '(1 2 3))])
     (test= "Get #1"
            (run* (res) (fresh (store) (evalo/ns (jget (jobj 1to6zip) (jstr "1")) res)))
            `(,(jnum 2)))
@@ -23,7 +23,7 @@
            (run* (res) (fresh (store) (evalo/ns (jget (jobj 1to6zip) (jstr "5")) res)))
            `(,(jnum 6)))
     (test= "Get, empty"
-           (run* (res) (fresh (store) (evalo/ns (jget (jobj `()) (jstr "1")) res)))
+           (run* (res) (fresh (store) (evalo/ns (jget (jobj '()) (jstr "1")) res)))
            `(,(jundef)))
     (test= "Get, not found"
            (run* (res) (fresh (store) (evalo/ns (jget (jobj 1to6zip) (jstr "4")) res)))
@@ -45,7 +45,7 @@
                ((string ((1 0 1 0 1 1))) number (0 1 1))
                ((string ((0 0 0 0 1 1))) number (0 0 1 0 0 1 1))))))
     (test= "Create, empty object"
-           (run* (res) (fresh (store) (evalo/ns (jset (jobj `()) (jstr "0") (jnum 100)) res)))
+           (run* (res) (fresh (store) (evalo/ns (jset (jobj '()) (jstr "0") (jnum 100)) res)))
            `(,(jobj `((,(jstr "0") . ,(jnum 100))))))
     (test= "Delete #1"
            (run* (res) (fresh (store) (evalo/ns (jdel (jobj 1to6zip) (jstr "1")) res)))
@@ -60,25 +60,25 @@
            (run* (res) (fresh (store) (evalo/ns (jdel (jobj 1to6zip) (jstr "0")) res)))
            `(,(jobj 1to6zip)))
     (test= "Variable reference #1"
-           (run* (res) (fresh (store) (eval-envo (jvar `x) `((x . 1) (y . 2) (z . 3)) res `() `() `() `())))
-           `(1))
+           (run* (res) (fresh (store) (eval-envo (jvar 'x) '((x . 1) (y . 2) (z . 3)) res '() '() '() '())))
+           '(1))
     (test= "Variable reference #2"
-           (run* (res) (fresh (store) (eval-envo (jvar `y) `((x . 1) (y . 2) (z . 3)) res `() `() `() `())))
-           `(2))
+           (run* (res) (fresh (store) (eval-envo (jvar 'y) '((x . 1) (y . 2) (z . 3)) res '() '() '() '())))
+           '(2))
     (test= "Variable reference #3"
-           (run* (res) (fresh (store) (eval-envo (jvar `z) `((x . 1) (y . 2) (z . 3)) res `() `() `() `())))
-           `(3))
+           (run* (res) (fresh (store) (eval-envo (jvar 'z) '((x . 1) (y . 2) (z . 3)) res '() '() '() '())))
+           '(3))
     (test= "Function application, no parameters"
-           (run* (res) (fresh (store) (evalo/ns (japp (jfun `() (jdelta `+ `(,(jnum 1) ,(jnum 5)))) `()) res)))
+           (run* (res) (fresh (store) (evalo/ns (japp (jfun '() (jdelta '+ `(,(jnum 1) ,(jnum 5)))) '()) res)))
            `(,(jnum 6)))
     (test= "Function application, parameter #1"
-           (run* (res) (fresh (store) (evalo/ns (japp (jfun `(x y z) (jvar `x)) 1to3) res)))
+           (run* (res) (fresh (store) (evalo/ns (japp (jfun '(x y z) (jvar 'x)) 1to3) res)))
            `(,(jnum 1)))
     (test= "Function application, parameter #2"
-           (run* (res) (fresh (store) (evalo/ns (japp (jfun `(x y z) (jvar `y)) 1to3) res)))
+           (run* (res) (fresh (store) (evalo/ns (japp (jfun '(x y z) (jvar 'y)) 1to3) res)))
            `(,(jnum 2)))
     (test= "Function application, parameter #3"
-           (run* (res) (fresh (store) (evalo/ns (japp (jfun `(x y z) (jvar `z)) 1to3) res)))
+           (run* (res) (fresh (store) (evalo/ns (japp (jfun '(x y z) (jvar 'z)) 1to3) res)))
            `(,(jnum 3)))
     (test= "Shadowing 1"
            (run* (res) (evalo/ns (jlet 'x (jnum 1)
@@ -87,37 +87,37 @@
            `(,(jnum 2)))
     (test= "Shadowing 2"
            (run* (res) (evalo/ns (jlet 'x (jnum 1)
-                                       (japp (jfun `(x) (jvar `x)) (list (jnum 2))))
+                                       (japp (jfun '(x) (jvar 'x)) (list (jnum 2))))
                                  res))
            `(,(jnum 2)))
     (test= "Shadowing 3"
-           (run* (res) (evalo/ns (japp (jfun `(x)
-                                             (jlet 'x (jnum 1) (jvar `x)))
+           (run* (res) (evalo/ns (japp (jfun '(x)
+                                             (jlet 'x (jnum 1) (jvar 'x)))
                                        (list (jnum 2)))
                                  res))
            `(,(jnum 1)))
     (test= "Allocation"
-           (run* (val store next-address) (eval-envo (jall (jnum 100)) `() val `() store `() next-address))
-           `(( ,(jref `()) (,(jnum 100))  (()) )))
+           (run* (val store next-address) (eval-envo (jall (jnum 100)) '() val '() store '() next-address))
+           `((,(jref '()) (,(jnum 100)) (()))))
     (test= "Dereference"
            (run* (val store next-address)
              (eval-envo (jlet 'x (jall (jnum 123)) (jderef (jvar 'x)))
-                        `() val `() store `() next-address))
+                        '() val '() store '() next-address))
            `((,(jnum 123) (,(jnum 123)) (()))))
     (test= "Assignment"
            (run* (val store next-address)
              (eval-envo (jlet 'x (jall (jnum 0)) (jassign (jvar 'x) (jnum 5)))
-                        `() val `() store `() next-address))
+                        '() val '() store '() next-address))
            `((,(jnum 5) (,(jnum 5))  (()) )))
     (test= "Combined memory functions"
            (run* (val store next-address)
              (eval-envo (jlet 'x (jall (jnum 0))
                               (jbeg (jassign (jvar 'x) (jnum 33))
                                     (jderef (jvar 'x))))
-                        `() val `(,(jnum 33)) store `(()) next-address))
+                        '() val `(,(jnum 33)) store '(()) next-address))
            `((,(jnum 33) (,(jnum 33) ,(jnum 33))  ((())) )))
-    (let ((testfunc (jfun `(x)
-                          (jlet 'y (jall (jvar `x))
+    (let ((testfunc (jfun '(x)
+                          (jlet 'y (jall (jvar 'x))
                                 (jif (jderef (jvar 'y))
                                      (jnum 1)
                                      (jnum 0))))))
@@ -128,23 +128,23 @@
              (run* (val) (evalo/ns (japp testfunc `(,(jbool #f))) val))
              `(,(jnum 0)))
       )
-    (let ([breakval (jthrow `error (jnum 11))])
+    (let ([breakval (jthrow 'error (jnum 11))])
       (test= "Basic break"
              (run* (val) (evalo/ns breakval val))
-             `(,(jbrk `error (jnum 11))))
+             `(,(jbrk 'error (jnum 11))))
       (test= "Catch, no break"
-             (run* (val) (evalo/ns (jcatch `error (jnum 0) `err-var (jvar `err-var)) val))
+             (run* (val) (evalo/ns (jcatch 'error (jnum 0) 'err-var (jvar 'err-var)) val))
              `(,(jnum 0)))
       (test= "Basic catch"
-             (run* (val) (evalo/ns (jcatch `error breakval `err-var (jvar `err-var)) val))
+             (run* (val) (evalo/ns (jcatch 'error breakval 'err-var (jvar 'err-var)) val))
              `(,(jnum 11)))
       (test= "Basic catch, wrong label"
-             (run* (val) (evalo/ns (jcatch `loop-break breakval `err-var (jvar `err-var)) val))
-             `(,(jbrk `error (jnum 11))))
+             (run* (val) (evalo/ns (jcatch 'loop-break breakval 'err-var (jvar 'err-var)) val))
+             `(,(jbrk 'error (jnum 11))))
       )
     )
   (test= "typeof"
-         (map (lambda (x) (run* (val) (evalo/ns (jdelta `typeof `(,x)) val)))
+         (map (lambda (x) (run* (val) (evalo/ns (jdelta 'typeof `(,x)) val)))
               (list
                (jundef)
                (jnul)
@@ -155,43 +155,43 @@
                (jall (jset (jobj '()) (jstr "private") (jset (jobj '()) (jstr "call")     (jfun '() (jundef)))))))
          (map (lambda (x) `(,(jstr x))) (list "undefined" "object" "number" "string" "boolean" "object" "function")))
   (test= "+"
-         (run* (res) (fresh (store) (evalo/ns (jdelta `+ `(,(jnum 20) ,(jnum 10))) res)))
+         (run* (res) (fresh (store) (evalo/ns (jdelta '+ `(,(jnum 20) ,(jnum 10))) res)))
          `(,(jnum 30)))
   (test= "-"
-         (run* (res) (fresh (store) (evalo/ns (jdelta `- `(,(jnum 20) ,(jnum 10))) res)))
+         (run* (res) (fresh (store) (evalo/ns (jdelta '- `(,(jnum 20) ,(jnum 10))) res)))
          `(,(jnum 10)))
   (test= "*"
-         (run* (res) (fresh (store) (evalo/ns (jdelta `* `(,(jnum 20) ,(jnum 10))) res)))
+         (run* (res) (fresh (store) (evalo/ns (jdelta '* `(,(jnum 20) ,(jnum 10))) res)))
          `(,(jnum 200)))
   (test= "/"
-         (run* (res) (fresh (store) (evalo/ns (jdelta `/ `(,(jnum 20) ,(jnum 10))) res)))
+         (run* (res) (fresh (store) (evalo/ns (jdelta '/ `(,(jnum 20) ,(jnum 10))) res)))
          `(,(jnum 2)))
   (test= "< #1"
-         (run* (res) (fresh (store) (evalo/ns (jdelta `< `(,(jnum 20) ,(jnum 10))) res)))
+         (run* (res) (fresh (store) (evalo/ns (jdelta '< `(,(jnum 20) ,(jnum 10))) res)))
          `(,(jbool #f)))
   (test= "< #2"
-         (run* (res) (fresh (store) (evalo/ns (jdelta `< `(,(jnum 10) ,(jnum 20))) res)))
+         (run* (res) (fresh (store) (evalo/ns (jdelta '< `(,(jnum 10) ,(jnum 20))) res)))
          `(,(jbool #t)))
   (test= "string-+"
-         (run* (res) (fresh (store) (evalo/ns (jdelta `string-+ `(,(jstr "Hello") ,(jstr "World"))) res)))
+         (run* (res) (fresh (store) (evalo/ns (jdelta 'string-+ `(,(jstr "Hello") ,(jstr "World"))) res)))
          `(,(jstr "HelloWorld")))
   (test= "string-< #1"
-         (run* (res) (fresh (store) (evalo/ns (jdelta `string-< `(,(jstr "Hell") ,(jstr "Hello"))) res)))
+         (run* (res) (fresh (store) (evalo/ns (jdelta 'string-< `(,(jstr "Hell") ,(jstr "Hello"))) res)))
          `(,(jbool #t)))
   (test= "string-< #2"
-         (run* (res) (fresh (store) (evalo/ns (jdelta `string-< `(,(jstr "Helloo") ,(jstr "Hello"))) res)))
+         (run* (res) (fresh (store) (evalo/ns (jdelta 'string-< `(,(jstr "Helloo") ,(jstr "Hello"))) res)))
          `(,(jbool #f)))
   (test= "string-< #3"
-         (run* (res) (fresh (store) (evalo/ns (jdelta `string-< `(,(jstr "Helal") ,(jstr "Helbl"))) res)))
+         (run* (res) (fresh (store) (evalo/ns (jdelta 'string-< `(,(jstr "Helal") ,(jstr "Helbl"))) res)))
          `(,(jbool #t)))
   (test= "string-< #4"
-         (run* (res) (fresh (store) (evalo/ns (jdelta `string-< `(,(jstr "Helbl") ,(jstr "Helal"))) res)))
+         (run* (res) (fresh (store) (evalo/ns (jdelta 'string-< `(,(jstr "Helbl") ,(jstr "Helal"))) res)))
          `(,(jbool #f)))
   (test= "string-< #5"
-         (run* (res) (fresh (store) (evalo/ns (jdelta `string-< `(,(jstr "H") ,(jstr "H"))) res)))
+         (run* (res) (fresh (store) (evalo/ns (jdelta 'string-< `(,(jstr "H") ,(jstr "H"))) res)))
          `(,(jbool #f)))
   (test= "Combined delta test" ;; chr(ord('a')+2) -> 'c'
-         (run* (res) (fresh (store) (evalo/ns (jdelta `nat->char `(,(jdelta `+ `(,(jdelta `char->nat `(,(jstr "a"))) ,(jnum 2))))) res)))
+         (run* (res) (fresh (store) (evalo/ns (jdelta 'nat->char `(,(jdelta '+ `(,(jdelta 'char->nat `(,(jstr "a"))) ,(jnum 2))))) res)))
          `(,(jstr "c")))
   (test= "Try/finally no returns"
          (run* (res) (evalo/ns (jfin (jnum 1) (jnum 2)) res))
@@ -203,25 +203,25 @@
          (run* (res) (evalo/ns (jfin (jthrow 'return (jnum 1)) (jthrow 'return (jnum 2))) res))
          `(,(jbrk 'return (jnum 2))))
   (test= "While loop"
-         (run* (res) (evalo/ns (jlet `num (jall (jnum 1))
+         (run* (res) (evalo/ns (jlet 'num (jall (jnum 1))
                                      (jbeg (jwhile
-                                            (jdelta `< `(,(jderef (jvar `num)) ,(jnum 10)))
-                                            (jassign (jvar `num)
-                                                     (jdelta `+ `(,(jderef (jvar `num))
-                                                                  ,(jderef (jvar `num))))))
-                                           (jderef (jvar `num)))) res))
+                                            (jdelta '< `(,(jderef (jvar 'num)) ,(jnum 10)))
+                                            (jassign (jvar 'num)
+                                                     (jdelta '+ `(,(jderef (jvar 'num))
+                                                                  ,(jderef (jvar 'num))))))
+                                           (jderef (jvar 'num)))) res))
          `(,(jnum 16)))
   (test= "While loop with break"
-         (run* (res) (evalo/ns (jlet `num (jall (jnum 1))
-                                     (jcatch `break
+         (run* (res) (evalo/ns (jlet 'num (jall (jnum 1))
+                                     (jcatch 'break
                                              (jwhile
                                               (jbool #t)
-                                              (jif (jdelta `< `(,(jderef (jvar `num)) ,(jnum 10)))
-                                                   (jassign (jvar `num)
-                                                            (jdelta `+ `(,(jderef (jvar `num))
-                                                                         ,(jderef (jvar `num)))))
-                                                   (jthrow `break (jderef (jvar `num)))))
-                                             `break-var
-                                             (jvar `break-var))) res))
+                                              (jif (jdelta '< `(,(jderef (jvar 'num)) ,(jnum 10)))
+                                                   (jassign (jvar 'num)
+                                                            (jdelta '+ `(,(jderef (jvar 'num))
+                                                                         ,(jderef (jvar 'num)))))
+                                                   (jthrow 'break (jderef (jvar 'num)))))
+                                             'break-var
+                                             (jvar 'break-var))) res))
          `(,(jnum 16)))
   )

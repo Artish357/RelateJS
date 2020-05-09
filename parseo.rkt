@@ -41,10 +41,9 @@
              body-stmts body-jexprs body-jexpr)
        (== stmt `(for (,init-stmt ,cond-expr ,inc-expr) . ,body-stmts))
        (== jexpr (jbeg init-jexpr
-                       (jcatch `break
+                       (jcatch 'break
                                (jwhile cond-jexpr (jbeg body-jexpr inc-jexpr))
-                               `e
-                               (jundef))))
+                               'e (jundef))))
        (parse-expr-listo `(,cond-expr ,inc-expr) `(,cond-jexpr ,inc-jexpr))
        (parseo init-stmt init-jexpr)
        (parse-listo body-stmts body-jexprs)
@@ -52,20 +51,20 @@
     ; return control effect (Section 3.2.8)
     ((fresh (val-expr val-jexpr)
        (== stmt `(return ,val-expr))
-       (== jexpr (jthrow `return val-jexpr))
+       (== jexpr (jthrow 'return val-jexpr))
        (parse-expro val-expr val-jexpr)))
     ; throw control effect (Section 3.2.8)
     ((fresh (val-expr val-jexpr)  ;; throw
        (== stmt `(throw ,val-expr))
-       (== jexpr (jthrow `error val-jexpr))
+       (== jexpr (jthrow 'error val-jexpr))
        (parse-expro val-expr val-jexpr)))
     ; break control effect (Section 3.2.8)
-    ((== stmt `(break)) (== jexpr (jthrow `break (jundef))))
+    ((== stmt `(break)) (== jexpr (jthrow 'break (jundef))))
     ; try/catch control effect (Section 3.2.8)
     ((fresh (try-stmt try-jexpr catch-stmt catch-jexpr catch-var)
        (== stmt `(try ,try-stmt catch ,catch-var ,catch-stmt))
        (== jexpr
-           (jbeg (jcatch `error try-jexpr catch-var
+           (jbeg (jcatch 'error try-jexpr catch-var
                          (jlet catch-var (jall (jvar catch-var)) catch-jexpr))
                  (jundef)))
        (parseo try-stmt try-jexpr)
@@ -83,7 +82,9 @@
        (== stmt `(try ,try-stmt
                   catch ,catch-var ,catch-stmt
                   finally ,finally-stmt))
-       (== jexpr (jbeg (jcatch `error try-jexpr catch-var (jlet catch-var (jall (jvar catch-var)) catch-jexpr))
+       (== jexpr (jbeg (jcatch 'error try-jexpr catch-var
+                               (jlet catch-var (jall (jvar catch-var))
+                                     catch-jexpr))
                        (jbeg finally-jexpr (jundef))))
        (parseo try-stmt try-jexpr)
        (parseo catch-stmt catch-jexpr)
@@ -91,7 +92,7 @@
     ; while statements (Section 3.2.7)
     ((fresh (cond-expr cond-jexpr body-stmts body-jexprs body-jexpr)
        (== stmt `(while ,cond-expr . ,body-stmts))
-       (== jexpr (jcatch `break (jwhile cond-jexpr body-jexpr) `e (jundef)))
+       (== jexpr (jcatch 'break (jwhile cond-jexpr body-jexpr) 'e (jundef)))
        (parse-expro cond-expr cond-jexpr)
        (parse-listo body-stmts body-jexprs)
        (begino body-jexprs body-jexpr)))))
@@ -189,7 +190,7 @@
 
 ; Parse a list of statements
 (define (parse-listo stmts jexprs)
-  (conde ((== stmts `()) (== jexprs `()))
+  (conde ((== stmts '()) (== jexprs '()))
          ((fresh (stmt jexpr stmts-rest jexprs-rest)
             (== stmts `(,stmt . ,stmts-rest))
             (== jexprs `(,jexpr . ,jexprs-rest))
@@ -198,7 +199,7 @@
 
 ; Parse a list of expressions
 (define (parse-expr-listo exprs jexprs)
-  (conde ((== exprs `()) (== jexprs `()))
+  (conde ((== exprs '()) (== jexprs '()))
          ((fresh (expr jexpr exprs-rest jexprs-rest)
             (== exprs `(,expr . ,exprs-rest))
             (== jexprs `(,jexpr . ,jexprs-rest))
@@ -231,18 +232,18 @@
 
 ; build nested LambdaJS begin out of a list of LambdaJS exprs
 (define (begino jexprs jexpr)
-  (conde ((== jexprs `()) (== jexpr (jundef)))
+  (conde ((== jexprs '()) (== jexpr (jundef)))
          ((== jexprs `(,jexpr)))
          ((fresh (first rest rest-jexpr)
             (== jexprs`(,first . ,rest))
-            (=/= rest `())
+            (=/= rest '())
             (== jexpr (jbeg first rest-jexpr))
             (begino rest rest-jexpr)))))
 
 ; Hoist variable declarations out of a statement
 (define (hoist-varo stmt vars)
   (conde ((fresh (x) (== stmt `(var . ,x)) (hoist-nameso x vars)))
-         ((== vars `())  ;; These never embed var declarations
+         ((== vars '())  ;; These never embed var declarations
           (conde ((fresh (x) (== stmt `(return ,x))))
                  ((fresh (x) (== stmt `(throw ,x))))
                  ((fresh (x) (== stmt `(number ,x))))
@@ -280,7 +281,7 @@
             (hoist-var-listo `(,init . ,body) vars)))))
 
 (define (hoist-var-listo stmts vars)
-  (conde ((== stmts `()) (== vars `()))
+  (conde ((== stmts '()) (== vars '()))
          ((fresh (stmt stmts-rest vars-first vars-rest)
             (== stmts `(,stmt . ,stmts-rest))
             (hoist-varo stmt vars-first)
@@ -288,7 +289,7 @@
             (appendo vars-first vars-rest vars)))))
 
 (define (hoist-nameso vars names)
-  (conde ((== vars `()) (== names `()))
+  (conde ((== vars '()) (== names '()))
          ((fresh (var v-rest name val rest)
             (== vars `(,var . ,v-rest))
             (== names `(,name . ,rest))
@@ -313,7 +314,7 @@
 
 ; list (set) difference operation
 (define (differenceo items toremove remaining)
-  (conde ((== items `()) (== remaining items))
+  (conde ((== items '()) (== remaining items))
          ((fresh (el rest remaining-rest)
             (== items `(,el . ,rest))
             (conde ((== remaining `(,el . ,remaining-rest))
@@ -323,16 +324,16 @@
                     (differenceo rest toremove remaining)))))))
 
 (define/match (humanize stmt )
-  [((list `string x)) (list->string (map (compose integer->char mknum->num) x))]
-  [((list `number x)) (mknum->num x)]
-  [((list)) `()]
+  [((list 'string x)) (list->string (map (compose integer->char mknum->num) x))]
+  [((list 'number x)) (mknum->num x)]
+  [((list)) '()]
   [((? list?)) (cons (humanize (car stmt )) (humanize (cdr stmt )))]
   [(_) stmt ])
 
 (define/match (dehumanize stmt )
   [((? string?)) (jstr stmt )]
   [((? integer?)) (jnum stmt )]
-  [((list)) `()]
+  [((list)) '()]
   [((? list?)) (cons (dehumanize (car stmt )) (dehumanize (cdr stmt )))]
   [(_) stmt ])
 

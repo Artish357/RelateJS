@@ -30,7 +30,7 @@
          (run 1 (res)
               (fresh (code store)
                      (parseo/readable
-                      `(call (function ()
+                      '(call (function ()
                                        (var (sum_of_range (function (n)
                                                                     (var (total 0))
                                                                     (for ((var (i 1)) (op < i (op + n 1)) (:= i (op + i 1)))

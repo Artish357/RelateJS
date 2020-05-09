@@ -5,7 +5,7 @@
 ;; Entry point for the LambdaJS interpreter
 (define (evalo expr val store)
   (fresh (next-address^)
-         (eval-envo expr `() val `() store `() next-address^)))
+         (eval-envo expr '() val '() store '() next-address^)))
 
 ;; LambdaJS interpreter with store
 (define (eval-envo expr env value
@@ -178,7 +178,7 @@
               ((== try-val `(,try-val-tag . ,try-val-payload)) ; no break caught
                (== `(,value ,store~ ,next-address~)
                    `(,try-val ,store^ ,next-address^))
-               (=/= try-val-tag `break))
+               (=/= try-val-tag 'break))
               ((== try-val (jbrk catch-label break-val)) ; break caught
                (appendo `((,catch-var . ,break-val)) env env^)
                (eval-envo catch-expr env^ value store^ store~
@@ -203,19 +203,19 @@
               (typeofo v1 (jstr "number") store~)
               (typeofo v2 (jstr "number") store~)
               (== `(,(jrawnum digits1) ,(jrawnum digits2)) args)
-              (conde ((== rator `+)
+              (conde ((== rator '+)
                       (== value (jrawnum result))
                       (pluso digits1 digits2 result))
-                     ((== rator `-)
+                     ((== rator '-)
                       (== value (jrawnum result))
                       (minuso digits1 digits2 result))
-                     ((== rator `*)
+                     ((== rator '*)
                       (== value (jrawnum result))
                       (*o digits1 digits2 result))
-                     ((== rator `/)
+                     ((== rator '/)
                       (== value (jrawnum result))
                       (/o digits1 digits2 result remainder))
-                     ((== rator `<)
+                     ((== rator '<)
                       (conde ((== value (jbool #t)) (<o digits1 digits2))
                              ((== value (jbool #f)) (<=o digits2 digits1)))))))
            ((fresh (v1 v2) ; ===
@@ -229,31 +229,31 @@
               (== `(,str) args)
               (typeofo str (jstr "string") store~)
               (== `(,(jrawstr `(,char))) args)
-              (== rator `char->nat)
+              (== rator 'char->nat)
               (== value (jrawnum char))))
            ((fresh (num digits) ; nat->char
               (== `(,num) args)
               (typeofo num (jstr "number") store~)
               (== `(,(jrawnum digits)) args)
-              (== rator `nat->char)
+              (== rator 'nat->char)
               (== value (jrawstr `(,digits)))))
            ((fresh (v1 v2 chars1 chars2 result) ; string operations
               (== `(,v1 ,v2) args)
               (typeofo v1 (jstr "string") store~)
               (typeofo v2 (jstr "string") store~)
               (== `(,(jrawstr chars1) ,(jrawstr chars2)) args)
-              (conde ((== rator `string-+)
+              (conde ((== rator 'string-+)
                       (== value (jrawstr result))
                       (appendo chars1 chars2 result))
-                     ((== rator `string-<)
+                     ((== rator 'string-<)
                       (string-lesso chars1 chars2 value)))))))))))
 
 ;; Sequentially evaluate a list of LambdaJS expressions
 (define (eval-env-listo exprs env vals store store~ next-address next-address~)
   (conde
     ; base case: empty list of expressions
-    ((== exprs `())
-     (== vals (value-list `()))
+    ((== exprs '())
+     (== vals (value-list '()))
      (== store store~)
      (== next-address next-address~))
     ; non-empty list of expressions
@@ -278,7 +278,7 @@
             (== `(,value~ ,store~ ,next-address~)
                 `(,value^ ,store^ ,next-address^)))
            ((== `(,tag . ,rest) value^)
-            (=/= tag `break)
+            (=/= tag 'break)
             cont ...))))
 
 (define (typeofo value type store)
@@ -306,10 +306,10 @@
 
 (define (string-lesso s1 s2 value)
   (fresh (x x^ y y^ rest)
-    (conde ((== s1 `())
+    (conde ((== s1 '())
             (== s2 `(,x . ,rest))
             (== value (jbool #t)))
-           ((== s2 `())
+           ((== s2 '())
             (== value (jbool #f)))
            ((== s1 `(,x . ,x^))
             (== s2 `(,x . ,y^))
@@ -326,5 +326,5 @@
             (<=o y x)))))
 
 (define (value-list values)
-  (cons `value-list values))
+  (cons 'value-list values))
 

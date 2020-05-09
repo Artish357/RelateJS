@@ -9,7 +9,7 @@
   (incremento out in))
 
 (define (keyso o k)
-  (conde ((== o `()) (== k `()))
+  (conde ((== o '()) (== k '()))
          ((fresh (x v o2 k2)
                  (== o `((,x . ,v) . ,o2))
                  (== k `(,x . ,k2))
@@ -21,7 +21,7 @@
          (not-in-listo val keys)))
 
 (define (updateo obj key value result)
-  (conde ((== obj `())
+  (conde ((== obj '())
           (== result `((,key . ,value))))
          ((fresh (orest rrest k v v2)
                  (== obj    `((,k . ,v ) . ,orest))
@@ -36,14 +36,14 @@
 (define (update-objecto obj keys values result)
   (fresh (k krest v vrest obj^)
          (conde
-          ((== keys `()) (== values `()) (== result obj))
+          ((== keys '()) (== values '()) (== result obj))
           ((== keys `(,k . ,krest))
            (== values `(,v . ,vrest))
            (updateo obj k v obj^)
            (update-objecto obj^ krest vrest result)))))
 
 (define (deleteo obj key result)
-  (conde ((== obj `()) (== result `()))
+  (conde ((== obj '()) (== result '()))
          ((fresh (orest rrest k v)
                  (== obj `((,k . ,v) . ,orest))
                  (conde ((== k key)
@@ -54,7 +54,7 @@
                  ))))
 
 (define (appendo s t r)
-  (conde ((== s `()) (== t r))
+  (conde ((== s '()) (== t r))
          ((fresh (r^ sel srest)
                  (== r `(,sel . ,r^))
                  (== s `(,sel . ,srest))
@@ -70,7 +70,7 @@
 
 (define (not-in-listo el list)
   (conde
-   ((== list `()))
+   ((== list '()))
    ((fresh (x rest)
            (== `(,x . ,rest) list)
            (=/= el x)
@@ -86,19 +86,19 @@
 (define (indexo lst index result)
   (fresh (l lrest index^)
          (== lst `(,l . ,lrest))
-         (conde ((== index `())
+         (conde ((== index '())
                  (== result l))
-                ((=/= index `())
+                ((=/= index '())
                  (decremento index index^)
                  (indexo lrest index^ result)))))
 
 (define (set-indexo lst index value result)
   (fresh (l lrest rrest index^)
          (== lst `(,l . ,lrest))
-         (conde ((== index `())
+         (conde ((== index '())
                  (== result `(,value . ,lrest)))
                 ((== result `(,l . ,rrest))
-                 (=/= index `())
+                 (=/= index '())
                  (decremento index index^)
                  (set-indexo lrest index^ value rrest)))))
 

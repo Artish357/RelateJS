@@ -60,10 +60,10 @@
   `(if ,cond ,then ,else))
 
 (define (jundef)
-  `(undefined))
+  '(undefined))
 
 (define (jnul)
-  `(null))
+  '(null))
 
 (define (jwhile cond body)
   `(while ,cond ,body))
@@ -89,4 +89,4 @@
 (define (jdelta fun vals)
   `(delta ,fun ,vals))
 
-(define (jpass) `pass)
+(define (jpass) 'pass)

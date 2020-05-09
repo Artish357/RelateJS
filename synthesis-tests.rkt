@@ -37,19 +37,19 @@
                              (parseo/readable `(call (function (x) ,out) "Hello World!") c2)
                              (evalo c2 (jstr "Hello World!") s2)
                              ))
-         `((return x)))
+         '((return x)))
   (test= "3+x=7"
-         (run 1 (r) (fresh (store) (evalo (jdelta `+ `(,(jnum 3) ,r)) (jnum 7) store)))
+         (run 1 (r) (fresh (store) (evalo (jdelta '+ `(,(jnum 3) ,r)) (jnum 7) store)))
          `(,(jnum 4)))
   (test= "x+3=7"
-         (run 1 (r) (fresh (store) (evalo (jdelta `+ `(,r ,(jnum 3))) (jnum 7) store)))
+         (run 1 (r) (fresh (store) (evalo (jdelta '+ `(,r ,(jnum 3))) (jnum 7) store)))
          `(,(jnum 4)))
   (test= "2?2=4"
          (run 2 (r) (fresh (store) (evalo (jdelta r `(,(jnum 2) ,(jnum 2))) (jnum 4) store)))
-         `(+ *))
+         '(+ *))
   (test= "if/var case"
          (length (run 1 (inside) (fresh (code store)
-                                        (parseo/readable `(call (function (x) (return (call (function () (if #f (var x) (return x)))))) 42)
+                                        (parseo/readable '(call (function (x) (return (call (function () (if #f (var x) (return x)))))) 42)
                                                   code)
                                         (evalo code (jundef) store)
                                         )))
