@@ -230,7 +230,7 @@
             (parse-expro val-expr val-jexpr)
             (parse-obj-bindingso binding-exprs-rest obj-jexpr-rest)))))
 
-; build nested LambdaJS begin out of a list of LambdaJS exprs
+; Build nested LambdaJS begin out of a list of LambdaJS exprs
 (define (begino jexprs jexpr)
   (conde ((== jexprs '()) (== jexpr (jundef)))
          ((== jexprs `(,jexpr)))
@@ -240,9 +240,9 @@
             (== jexpr (jbeg first rest-jexpr))
             (begino rest rest-jexpr)))))
 
-; Hoist variable declarations out of a statement
+; Hoist declared variables out of a statement
 (define (hoist-varo stmt vars)
-  (conde ((fresh (x) (== stmt `(var . ,x)) (hoist-nameso x vars)))
+  (conde ((fresh (x) (== stmt `(var . ,x)) (var-nameso x vars)))
          ((== vars '())  ;; These never embed var declarations
           (conde ((fresh (x) (== stmt `(return ,x))))
                  ((fresh (x) (== stmt `(throw ,x))))
@@ -289,15 +289,14 @@
             (hoist-var-listo stmts-rest vars-rest)
             (appendo vars-first vars-rest vars)))))
 
-(define (hoist-nameso vars names)
-  (conde ((== vars '()) (== names '()))
-         ((fresh (var v-rest name val rest)
-            (== vars `(,var . ,v-rest))
-            (== names `(,name . ,rest))
-            (conde ((== var `(,name ,val)))
-                   ((symbolo var)
-                    (== name var)))
-            (hoist-nameso v-rest rest)))))
+(define (var-nameso var-decls names)
+  (conde ((== var-decls '()) (== names '()))
+         ((fresh (var-decl var-decls-rest name expr names-rest)
+            (== var-decls `(,var-decl . ,var-decls-rest))
+            (== names `(,name . ,names-rest))
+            (conde ((== var-decl `(,name ,expr)))
+                   ((symbolo var-decl) (== name var-decl)))
+            (var-nameso var-decls-rest names-rest)))))
 
 (define (allocateo var-names body-jexpr full-jexpr)
   (conde ((== var-names '()) (== full-jexpr body-jexpr))
