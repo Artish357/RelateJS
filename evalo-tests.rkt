@@ -172,23 +172,23 @@
   (test= "< #2"
          (run* (res) (fresh (store) (evalo/ns (jdelta '< `(,(jnum 10) ,(jnum 20))) res)))
          `(,(jbool #t)))
-  (test= "string-+"
-         (run* (res) (fresh (store) (evalo/ns (jdelta 'string-+ `(,(jstr "Hello") ,(jstr "World"))) res)))
+  (test= "string+"
+         (run* (res) (fresh (store) (evalo/ns (jdelta 'string+ `(,(jstr "Hello") ,(jstr "World"))) res)))
          `(,(jstr "HelloWorld")))
-  (test= "string-< #1"
-         (run* (res) (fresh (store) (evalo/ns (jdelta 'string-< `(,(jstr "Hell") ,(jstr "Hello"))) res)))
+  (test= "string< #1"
+         (run* (res) (fresh (store) (evalo/ns (jdelta 'string< `(,(jstr "Hell") ,(jstr "Hello"))) res)))
          `(,(jbool #t)))
-  (test= "string-< #2"
-         (run* (res) (fresh (store) (evalo/ns (jdelta 'string-< `(,(jstr "Helloo") ,(jstr "Hello"))) res)))
+  (test= "string< #2"
+         (run* (res) (fresh (store) (evalo/ns (jdelta 'string< `(,(jstr "Helloo") ,(jstr "Hello"))) res)))
          `(,(jbool #f)))
-  (test= "string-< #3"
-         (run* (res) (fresh (store) (evalo/ns (jdelta 'string-< `(,(jstr "Helal") ,(jstr "Helbl"))) res)))
+  (test= "string< #3"
+         (run* (res) (fresh (store) (evalo/ns (jdelta 'string< `(,(jstr "Helal") ,(jstr "Helbl"))) res)))
          `(,(jbool #t)))
-  (test= "string-< #4"
-         (run* (res) (fresh (store) (evalo/ns (jdelta 'string-< `(,(jstr "Helbl") ,(jstr "Helal"))) res)))
+  (test= "string< #4"
+         (run* (res) (fresh (store) (evalo/ns (jdelta 'string< `(,(jstr "Helbl") ,(jstr "Helal"))) res)))
          `(,(jbool #f)))
-  (test= "string-< #5"
-         (run* (res) (fresh (store) (evalo/ns (jdelta 'string-< `(,(jstr "H") ,(jstr "H"))) res)))
+  (test= "string< #5"
+         (run* (res) (fresh (store) (evalo/ns (jdelta 'string< `(,(jstr "H") ,(jstr "H"))) res)))
          `(,(jbool #f)))
   (test= "Combined delta test" ;; chr(ord('a')+2) -> 'c'
          (run* (res) (fresh (store) (evalo/ns (jdelta 'nat->char `(,(jdelta '+ `(,(jdelta 'char->nat `(,(jstr "a"))) ,(jnum 2))))) res)))

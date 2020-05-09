@@ -242,10 +242,10 @@
               (typeofo v1 (jstr "string") store~)
               (typeofo v2 (jstr "string") store~)
               (== `(,(jrawstr chars1) ,(jrawstr chars2)) args)
-              (conde ((== rator 'string-+)
+              (conde ((== rator 'string+)
                       (== value (jrawstr result))
                       (appendo chars1 chars2 result))
-                     ((== rator 'string-<)
+                     ((== rator 'string<)
                       (string-lesso chars1 chars2 value)))))))))))
 
 ;; Sequentially evaluate a list of LambdaJS expressions
