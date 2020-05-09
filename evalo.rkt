@@ -22,6 +22,12 @@
             ((fresh (payload) (== expr (jrawstr payload))))
             ((== expr (jundef)))
             ((== expr (jnul)))))
+    ;; Immutable variable lookup (Section 2.2.2)
+    ((fresh (var) ;; Look up a variable
+       (== expr (jvar var))
+       (== store store~)
+       (== next-address next-address~)
+       (lookupo var env value)))
     ;; Let expressions (Section 2.2.2)
     ((fresh (lhs-var          ; variable being bound
              rhs-expr rhs-val ; right-hand side expression & value
@@ -35,12 +41,6 @@
          (== let-env `((,lhs-var . ,rhs-val) . ,env))
          (eval-envo body let-env value store^ store~
                     next-address^ next-address~))))
-    ;; Immutable variable lookup (Section 2.2.2)
-    ((fresh (var) ;; Look up a variable
-       (== expr (jvar var))
-       (== store store~)
-       (== next-address next-address~)
-       (lookupo var env value)))
     ;; Function definition (Section 2.2.4)
     ((fresh (body params)
        (== expr (jfun params body))
@@ -198,25 +198,6 @@
        (effect-propagateo value^ value store~ store~ next-address~ next-address~
          (== value^ (value-list args))
          (conde
-           ((fresh (v1) ; typeof
-              (== `(,rator (,v1)) `(typeof ,args))
-              (typeofo v1 value store~)))
-           ((fresh (str char) ; char->nat
-              (== `(,str) args)
-              (typeofo str (jstr "string") store~)
-              (== `(,(jrawstr `(,char))) args)
-              (== rator `char->nat)
-              (== value (jrawnum char))))
-           ((fresh (num digits) ; nat->char
-              (== `(,num) args)
-              (typeofo num (jstr "number") store~)
-              (== `(,(jrawnum digits)) args)
-              (== rator `nat->char)
-              (== value (jrawstr `(,digits)))))
-           ((fresh (v1 v2) ; ===
-              (== `(,rator ,args) `(=== (,v1 ,v2)))
-              (conde ((== value (jbool #t)) (== v1 v2))
-                     ((== value (jbool #f)) (=/= v1 v2)))))
            ((fresh (v1 v2 digits1 digits2 result remainder) ; numeric operations
               (== `(,v1 ,v2) args)
               (typeofo v1 (jstr "number") store~)
@@ -237,6 +218,25 @@
                      ((== rator `<)
                       (conde ((== value (jbool #t)) (<o digits1 digits2))
                              ((== value (jbool #f)) (<=o digits2 digits1)))))))
+           ((fresh (v1 v2) ; ===
+              (== `(,rator ,args) `(=== (,v1 ,v2)))
+              (conde ((== value (jbool #t)) (== v1 v2))
+                     ((== value (jbool #f)) (=/= v1 v2)))))
+           ((fresh (v1) ; typeof
+              (== `(,rator (,v1)) `(typeof ,args))
+              (typeofo v1 value store~)))
+           ((fresh (str char) ; char->nat
+              (== `(,str) args)
+              (typeofo str (jstr "string") store~)
+              (== `(,(jrawstr `(,char))) args)
+              (== rator `char->nat)
+              (== value (jrawnum char))))
+           ((fresh (num digits) ; nat->char
+              (== `(,num) args)
+              (typeofo num (jstr "number") store~)
+              (== `(,(jrawnum digits)) args)
+              (== rator `nat->char)
+              (== value (jrawstr `(,digits)))))
            ((fresh (v1 v2 chars1 chars2 result) ; string operations
               (== `(,v1 ,v2) args)
               (typeofo v1 (jstr "string") store~)
