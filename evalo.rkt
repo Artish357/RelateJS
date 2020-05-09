@@ -3,9 +3,9 @@
 (provide evalo eval-envo)
 
 ;; Entry point for the LambdaJS interpreter
-(define (evalo expr val store)
-  (fresh (next-address^)
-         (eval-envo expr '() val '() store '() next-address^)))
+(define (evalo expr val store~)
+  (fresh (next-address~)
+    (eval-envo expr '() val '() store~ '() next-address~)))
 
 ;; LambdaJS interpreter with store
 (define (eval-envo expr env value
@@ -327,4 +327,3 @@
 
 (define (value-list values)
   (cons 'value-list values))
-

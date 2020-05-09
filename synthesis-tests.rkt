@@ -32,11 +32,10 @@
          5)
   (test= "Echo"
          (run 1 (out) (fresh (c1 c2 s1 s2)
-                             (parseo/readable `(call (function (x) ,out) 5) c1)
-                             (evalo c1 (jnum 5) s1)
-                             (parseo/readable `(call (function (x) ,out) "Hello World!") c2)
-                             (evalo c2 (jstr "Hello World!") s2)
-                             ))
+                        (parseo/readable `(call (function (x) ,out) 5) c1)
+                        (evalo c1 (jnum 5) s1)
+                        (parseo/readable `(call (function (x) ,out) "Hello World!") c2)
+                        (evalo c2 (jstr "Hello World!") s2)))
          '((return x)))
   (test= "3+x=7"
          (run 1 (r) (fresh (store) (evalo (jdelta '+ `(,(jnum 3) ,r)) (jnum 7) store)))
@@ -49,10 +48,9 @@
          '(+ *))
   (test= "if/var case"
          (length (run 1 (inside) (fresh (code store)
-                                        (parseo/readable '(call (function (x) (return (call (function () (if #f (var x) (return x)))))) 42)
-                                                  code)
-                                        (evalo code (jundef) store)
-                                        )))
+                                   (parseo/readable '(call (function (x) (return (call (function () (if #f (var x) (return x)))))) 42)
+                                                    code)
+                                   (evalo code (jundef) store))))
          1)
 ;    (test= "Range of 3"
 ;           (run 1 (res) (fresh (func code i obj public temp store)
@@ -110,7 +108,6 @@
                 `(((3) ,(jnum 3))
                   ((4) ,(jnum 6)))))
          '((total (op + total i))))
-
   (test= "For loop range sum (slow, ~50 seconds)"
          (run 1 (fragment)
            (PBE (lambda (n)

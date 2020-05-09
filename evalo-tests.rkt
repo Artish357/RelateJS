@@ -40,10 +40,10 @@
     (test= "Create"
            (run* (res) (fresh (store) (evalo/ns (jset (jobj 1to6zip) (jstr "0") (jnum 100)) res)))
            '((object
-              (((string ((1 0 0 0 1 1))) number (0 1))
-               ((string ((1 1 0 0 1 1))) number (0 0 1))
-               ((string ((1 0 1 0 1 1))) number (0 1 1))
-               ((string ((0 0 0 0 1 1))) number (0 0 1 0 0 1 1))))))
+               (((string ((1 0 0 0 1 1))) number (0 1))
+                ((string ((1 1 0 0 1 1))) number (0 0 1))
+                ((string ((1 0 1 0 1 1))) number (0 1 1))
+                ((string ((0 0 0 0 1 1))) number (0 0 1 0 0 1 1))))))
     (test= "Create, empty object"
            (run* (res) (fresh (store) (evalo/ns (jset (jobj '()) (jstr "0") (jnum 100)) res)))
            `(,(jobj `((,(jstr "0") . ,(jnum 100))))))
@@ -146,13 +146,13 @@
   (test= "typeof"
          (map (lambda (x) (run* (val) (evalo/ns (jdelta 'typeof `(,x)) val)))
               (list
-               (jundef)
-               (jnul)
-               (jnum 42)
-               (jstr "Hello")
-               (jbool #f)
-               (jall (jset (jobj '()) (jstr "private") (jset (jobj '()) (jstr "not-call") (jfun '() (jundef)))))
-               (jall (jset (jobj '()) (jstr "private") (jset (jobj '()) (jstr "call")     (jfun '() (jundef)))))))
+                (jundef)
+                (jnul)
+                (jnum 42)
+                (jstr "Hello")
+                (jbool #f)
+                (jall (jset (jobj '()) (jstr "private") (jset (jobj '()) (jstr "not-call") (jfun '() (jundef)))))
+                (jall (jset (jobj '()) (jstr "private") (jset (jobj '()) (jstr "call")     (jfun '() (jundef)))))))
          (map (lambda (x) `(,(jstr x))) (list "undefined" "object" "number" "string" "boolean" "object" "function")))
   (test= "+"
          (run* (res) (fresh (store) (evalo/ns (jdelta '+ `(,(jnum 20) ,(jnum 10))) res)))
@@ -205,22 +205,22 @@
   (test= "While loop"
          (run* (res) (evalo/ns (jlet 'num (jall (jnum 1))
                                      (jbeg (jwhile
-                                            (jdelta '< `(,(jderef (jvar 'num)) ,(jnum 10)))
-                                            (jassign (jvar 'num)
-                                                     (jdelta '+ `(,(jderef (jvar 'num))
-                                                                  ,(jderef (jvar 'num))))))
+                                             (jdelta '< `(,(jderef (jvar 'num)) ,(jnum 10)))
+                                             (jassign (jvar 'num)
+                                                      (jdelta '+ `(,(jderef (jvar 'num))
+                                                                    ,(jderef (jvar 'num))))))
                                            (jderef (jvar 'num)))) res))
          `(,(jnum 16)))
   (test= "While loop with break"
          (run* (res) (evalo/ns (jlet 'num (jall (jnum 1))
                                      (jcatch 'break
                                              (jwhile
-                                              (jbool #t)
-                                              (jif (jdelta '< `(,(jderef (jvar 'num)) ,(jnum 10)))
-                                                   (jassign (jvar 'num)
-                                                            (jdelta '+ `(,(jderef (jvar 'num))
-                                                                         ,(jderef (jvar 'num)))))
-                                                   (jthrow 'break (jderef (jvar 'num)))))
+                                               (jbool #t)
+                                               (jif (jdelta '< `(,(jderef (jvar 'num)) ,(jnum 10)))
+                                                    (jassign (jvar 'num)
+                                                             (jdelta '+ `(,(jderef (jvar 'num))
+                                                                           ,(jderef (jvar 'num)))))
+                                                    (jthrow 'break (jderef (jvar 'num)))))
                                              'break-var
                                              (jvar 'break-var))) res))
          `(,(jnum 16)))

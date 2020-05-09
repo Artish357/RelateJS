@@ -9,9 +9,9 @@
 ; Parse a JavaScript statement with relational number and string literals
 (define (parse-topo stmt jexpr)
   (fresh (vars exp^ allocations body)
-         (hoist-varo stmt vars)
-         (allocateo vars body jexpr)
-         (parseo stmt body)))
+    (hoist-varo stmt vars)
+    (allocateo vars body jexpr)
+    (parseo stmt body)))
 
 ; Parse a JavaScript statement to LambdaJS expression
 (define (parseo stmt jexpr)
@@ -265,7 +265,8 @@
             (== stmt `(try ,try-stmt catch ,catch-var ,catch-stmt))
             (hoist-var-listo `(,try-stmt ,catch-stmt) vars)))
          ((fresh (try-stmt catch-stmt finally-stmt catch-var)
-            (== stmt `(try ,try-stmt catch ,catch-var ,catch-stmt finally ,finally-stmt))
+            (== stmt `(try ,try-stmt catch ,catch-var ,catch-stmt
+                           finally ,finally-stmt))
             (hoist-var-listo `(,try-stmt ,catch-stmt ,finally-stmt) vars)))
          ((fresh (cond then else)
             (== stmt `(if ,cond ,then ,else))
