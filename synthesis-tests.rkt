@@ -99,8 +99,7 @@
                 `(((3) ,(jnum 3))
                   ((4) ,(jnum 6)))))
          '(((op + total i))))
-#|
-  (test= "For loop range sum (slow, ~27 seconds)"
+  (test= "For loop range sum (slow, ~35 seconds)"
          (run 1 (fragment)
            (PBE (lambda (n)
                   `(call (function ()
@@ -112,7 +111,7 @@
                   ((4) ,(jnum 6)))))
          '((total (op + total i))))
 
-  (test= "For loop range sum (very slow, ~12 minutes)"
+  (test= "For loop range sum (slow, ~50 seconds)"
          (run 1 (fragment)
            (PBE (lambda (n)
                   `(call (function ()
@@ -123,5 +122,4 @@
                 `(((3) ,(jnum 3))
                   ((4) ,(jnum 6)))))
          '((var (total (op + i total)))))
-|#
   )
