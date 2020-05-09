@@ -104,7 +104,7 @@
 (define (parse-expro expr jexpr)
   (conde
    ;; variables (Section 3.2.1)
-   ((symbolo expr ) (== jexpr (jderef (jvar expr ))))
+   ((symbolo expr) (== jexpr (jderef (jvar expr))))
    ;; simple literals
    ((conde ((== expr jexpr)
             (fresh (x) (conde ((== expr `(number ,x)))
@@ -154,7 +154,6 @@
                       arg-jexprs))
       (parse-expro func-expr func-jexpr)
       (parse-expr-listo arg-exprs arg-jexprs)))
-
    ;; object creation (Section 3.2.4)
    ((fresh (binding-exprs public-jexpr)
       (== expr `(object . ,binding-exprs))
@@ -187,7 +186,6 @@
       (begino body-jexprs body-jexpr)
       (allocateo hoisted-vars body-jexpr body-jexpr/vars)
       (assigno params body-jexpr/vars body-jexpr/vars+params)))
-
    ;; Comma expression sequencing (not in paper since we can't decide on a name)
    ((fresh (exps exps^)
            (== expr `(comma . ,exps))
@@ -256,23 +254,23 @@
                    ((== stmt `(@ . ,x)))
                    ((== stmt `(:= . ,x))))))
          ((fresh (try-stmt catch-stmt catch-var)
-                 (== stmt `(try ,try-stmt catch ,catch-var ,catch-stmt))
-                 (hoist-var-listo `(,try-stmt ,catch-stmt) vars)))
+            (== stmt `(try ,try-stmt catch ,catch-var ,catch-stmt))
+            (hoist-var-listo `(,try-stmt ,catch-stmt) vars)))
          ((fresh (try-stmt catch-stmt finally-stmt catch-var)
-                 (== stmt `(try ,try-stmt catch ,catch-var ,catch-stmt finally ,finally-stmt))
-                 (hoist-var-listo `(,try-stmt ,catch-stmt ,finally-stmt) vars)))
+            (== stmt `(try ,try-stmt catch ,catch-var ,catch-stmt finally ,finally-stmt))
+            (hoist-var-listo `(,try-stmt ,catch-stmt ,finally-stmt) vars)))
          ((fresh (cond then else)
-                 (== stmt `(if ,cond ,then ,else))
-                 (hoist-var-listo `(,then ,else) vars)))
+            (== stmt `(if ,cond ,then ,else))
+            (hoist-var-listo `(,then ,else) vars)))
          ((fresh (cond body)
-                 (== stmt `(while ,cond . ,body))
-                 (hoist-var-listo body vars)))
+            (== stmt `(while ,cond . ,body))
+            (hoist-var-listo body vars)))
          ((fresh (exps)
-                 (== stmt `(begin . ,exps))
-                 (hoist-var-listo exps vars)))
+            (== stmt `(begin . ,exps))
+            (hoist-var-listo exps vars)))
          ((fresh (init cond inc body)
-                 (== stmt `(for (,init ,cond ,inc) . ,body))
-                 (hoist-var-listo `(,init . ,body) vars)))))
+            (== stmt `(for (,init ,cond ,inc) . ,body))
+            (hoist-var-listo `(,init . ,body) vars)))))
 
 (define (hoist-var-listo stmts vars)
   (conde ((== stmts `()) (== vars `()))
@@ -356,5 +354,3 @@
   [((list)) 0]
   [((cons d rest)) (+ d (* 2 (mknum->num rest)))]
   [(_) (begin x)])
-
-
