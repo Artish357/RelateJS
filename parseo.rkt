@@ -150,7 +150,7 @@
                        arg-jexprs))
        (parse-expro func-expr func-jexpr)
        (parse-expr-listo arg-exprs arg-jexprs)))
-    ;; object creation (Section 3.2.4)
+    ;; object creation (Section 3.2.2)
     ((fresh (binding-exprs public-jexpr)
        (== expr `(object . ,binding-exprs))
        (== jexpr (jall (jset (jobj `((,(jstr "private") . ,(jobj '()))))
