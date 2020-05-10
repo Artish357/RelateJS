@@ -18,7 +18,8 @@
                  (begin (printf "Running: ~s\n" name)
                         (time expr))
                  output))
-  (test= "Puzzle"
+
+  (test= "Puzzle (~150 milliseconds)"
          (run 5
            (BLANK)
            (fresh (code store)
@@ -90,18 +91,42 @@
                 `(((3) ,(jnum 3))
                   ((4) ,(jnum 6)))))
          '(_.0))
-  (test= "Range sum, total declaration and initialization (~600 milliseconds)"
+  (test= "Range sum, total declaration and initialization (~390 milliseconds)"
          (run 1 (BLANK)
            (PBE (lambda (n)
                   `(call (function (n)
-                                   (var (total 0))
+                                   ,BLANK
                                    (for ((var (i 0)) (op < i n) (:= i (op + i 1)))
-                                     (:= total . ,BLANK))
+                                     (:= total (op + total i)))
                                    (return total))
                          ,n))
                 `(((3) ,(jnum 3))
                   ((4) ,(jnum 6)))))
-         '(((op + i total))))
+         '((var (total (number ())))))
+  (test= "Range sum, i declaration and initialization (~160 milliseconds)"
+         (run 1 (BLANK)
+           (PBE (lambda (n)
+                  `(call (function (n)
+                                   (var (total 0))
+                                   (for (,BLANK (op < i n) (:= i (op + i 1)))
+                                     (:= total (op + total i)))
+                                   (return total))
+                         ,n))
+                `(((3) ,(jnum 3))
+                  ((4) ,(jnum 6)))))
+         '((var (i total))))
+  (test= "Range sum, end condition (~540 milliseconds)"
+         (run 1 (BLANK)
+           (PBE (lambda (n)
+                  `(call (function (n)
+                                   (var (total 0))
+                                   (for ((var (i 0)) ,BLANK (:= i (op + i 1)))
+                                     (:= total (op + total i)))
+                                   (return total))
+                         ,n))
+                `(((3) ,(jnum 3))
+                  ((4) ,(jnum 6)))))
+         '((op < i n)))
   (test= "Range sum, assignment right-hand-side (~600 milliseconds)"
          (run 1 (BLANK)
            (PBE (lambda (n)
