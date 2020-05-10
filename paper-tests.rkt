@@ -78,6 +78,19 @@
                              `(((2) ,(jnum 1))
                                ((5) ,(jnum 5)))))
          '((- x (number (1)))))
+  (test= "Fibonacci recursive, second subtraction operation description (~10 seconds)"
+         (run 1 (BLANK) (PBE (lambda (n)
+                               `(call (function ()
+                                                (var (fib (function (x)
+                                                                    (if (op < x 2)
+                                                                      (return x)
+                                                                      (return (op +
+                                                                                  (call fib (op - x 1))
+                                                                                  (call fib (op . ,BLANK))))))))
+                                                (return (call fib ,n)))))
+                             `(((2) ,(jnum 1))
+                               ((5) ,(jnum 5)))))
+         '((- x (number (0 1)))))
 
   (test= "Range sum (~35 milliseconds)"
          (run 1 (_)
@@ -127,6 +140,18 @@
                 `(((3) ,(jnum 3))
                   ((4) ,(jnum 6)))))
          '((op < i n)))
+  #;(test= "Range sum, increment (?)"
+         (run 1 (BLANK)
+           (PBE (lambda (n)
+                  `(call (function (n)
+                                   (var (total 0))
+                                   (for ((var (i 0)) (op < i n) ,BLANK)
+                                     (:= total (op + total i)))
+                                   (return total))
+                         ,n))
+                `(((3) ,(jnum 3))
+                  ((4) ,(jnum 6)))))
+         '((:= i (op + i 1))))
   (test= "Range sum, assignment right-hand-side (~600 milliseconds)"
          (run 1 (BLANK)
            (PBE (lambda (n)
