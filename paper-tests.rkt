@@ -52,6 +52,19 @@
                              `(((2) ,(jnum 1))
                                ((5) ,(jnum 5)))))
          '(_.0))
+  (test= "Fibonacci recursive, condition (~32 seconds)"
+         (run 1 (BLANK) (PBE (lambda (n)
+                               `(call (function ()
+                                                (var (fib (function (x)
+                                                                    (if ,BLANK
+                                                                      (return x)
+                                                                      (return (op +
+                                                                                  (call fib (op - x 1))
+                                                                                  (call fib (op - x 2))))))))
+                                                (return (call fib ,n)))))
+                             `(((2) ,(jnum 1))
+                               ((5) ,(jnum 5)))))
+         '(_.0))
   (test= "Fibonacci recursive, base case (~270 milliseconds)"
          (run 1 (BLANK) (PBE (lambda (n)
                                `(call (function ()
