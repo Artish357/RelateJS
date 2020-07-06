@@ -19,6 +19,29 @@
                         (time expr))
                  output))
 
+  (test= "Modulo operator as generator (24 seconds)"
+         (map humanize
+              (run 10 (INPUT)
+                (PBE (lambda x
+                       `(call (function (n m)
+                                        (while (op < m n)
+                                               (:= n (op - n m)))
+                                        (return n))
+                              . ,x))
+                     `(((,INPUT 3) ,(jnum 1))
+                       ((,INPUT 5) ,(jnum 2))))))
+
+         '(7
+           37
+           22
+           (op char->nat "\a")
+           (op char->nat "%")
+           (op char->nat "\u0016")
+           67
+           52
+           (op char->nat "C")
+           127))
+
   ;   (test= "Puzzle (~150 milliseconds)"
 ;          (run 5
 ;            (BLANK)
@@ -38,7 +61,7 @@
 ;            (var (x #f))
 ;            (var x)
 ;            (var (x (op _.0)))))
-; 
+;
 ;   (test= "Fibonacci recursive (~125 milliseconds)"
 ;          (run 1 (BLANK) (PBE (lambda (n)
 ;                                `(call (function ()
@@ -104,7 +127,7 @@
 ;                              `(((2) ,(jnum 1))
 ;                                ((5) ,(jnum 5)))))
 ;          '((- x (number (0 1)))))
-; 
+;
 ;   (test= "Range sum (~35 milliseconds)"
 ;          (run 1 (_)
 ;            (PBE (lambda (n)
@@ -213,100 +236,100 @@
   ;                `(((1) ,(jnum 1))
   ;                  ((2) ,(jnum 1)))))
   ;         '(((op + i total))))
-  (test= "No holes"
-         (run 1 (EXTRA BODY STORE)
-              (PBE (lambda (n) `(call (function (n)
-                                                (var (rec (function (y) (if (op < y 2) (return 1) (return (op * y (call rec (op - y 1))))))))
-                                                (if
-                                                 (op ===
-                                                     (call (function (x)
-                                                                     (var (counter 0) (total 1))
-                                                                     (for ((var (loop-var 1)) (op < loop-var (op + x 1)) (:= loop-var (op + loop-var 1)))
-                                                                       (:= total (op * total loop-var))
-                                                                       (if (op < (op * n n) counter)
-                                                                           (return 0)
-                                                                           (:= counter (op + counter 1)))
-                                                                       )
-                                                                     (return total)
-                                                                     ) n)
-                                                     (call rec n))
-                                                 (return #t)
-                                                 (return undefined))
-                                                )
-                                      ,n))
-                            `(((3) ,(jbool #t))
-                              ((4) ,(jbool #t))))
-              )
-         '((_.0 _.1 _.2)))
-  (test= "Imperative->recursive"
-         (run 1 (REC)
-              (PBE (lambda (n) `(call (function (n)
-                                                (var (rec (function (y) ,REC)))
-                                                (if
-                                                 (op ===
-                                                     (call (function (x)
-                                                                     (var (counter 0) (total 1))
-                                                                     (for ((var (loop-var 1)) (op < loop-var (op + x 1)) (:= loop-var (op + loop-var 1)))
-                                                                       (:= total (op * total loop-var))
-                                                                       (if (op < (op * n n) counter)
-                                                                           (return 0)
-                                                                           (:= counter (op + counter 1)))
-                                                                       )
-                                                                     (return total)
-                                                                     ) n)
-                                                     (call rec n))
-                                                 (return #t)
-                                                 (return undefined))
-                                                )
-                                      ,n))
-                            `(((1) ,(jbool #t))
-                              ((3) ,(jbool #t))
-                              ((4) ,(jbool #t))))
-              )
-         '((_.0 _.1 _.2)))
-  (test= "Recursive->iterative (while)"
-         (run 1 (COND BODY DECL PROG RET)
-              (PBE (lambda (n) `(call (function (n)
-                                                (var (rec (function (y) (if (op < y 2) (return 1) (return (op * y (call rec (op - y 1)))))))
-                                                     (iter (function (x)
-                                                                     (var (counter 0) . ,DECL)
-                                                                     (while ,COND
-                                                                       ,BODY
-                                                                       (if (op < (op * n n) counter)
-                                                                           (return #f)
-                                                                           (:= counter (op + counter 1))))
-                                                                     (return ,RET)
-                                                                     )))
-                                                (return (op === (call iter n) (call rec n))))
-                                      ,n))
-                            `(((1) ,(jbool #t))
-                              ((3) ,(jbool #t))
-                              ((4) ,(jbool #t))))
-              )
-         '((_.0 _.1 _.2)))
-  (test= "Recursive->iterative"
-         (run 1 (COND BODY DECL PROG)
-              (PBE (lambda (n) `(call (function (n)
-                                                (var (rec (function (y) (if (op < y 2) (return 1) (return (op * y (call rec (op - y 1))))))))
-                                                (if
-                                                 (op ===
-                                                     (call (function (x)
-                                                                     (var (counter 0))
-                                                                     (for ((var . ,DECL) (op < loop-var (op + x 1)) (:= loop-var (op + loop-var 1)))
-                                                                       ,BODY
-                                                                       (if (op < (op * n n) counter)
-                                                                           (return 0)
-                                                                           (:= counter (op + counter 1)))
-                                                                       )
-                                                                     (return total)
-                                                                     ) n)
-                                                     (call rec n))
-                                                 (return #t)
-                                                 (return undefined))
-                                                )
-                                      ,n))
-                            `(((3) ,(jbool #t))
-                              ((4) ,(jbool #t))))
-              )
-         '((_.0 _.1 _.2)))
+  ;(test= "No holes"
+         ;(run 1 (EXTRA BODY STORE)
+              ;(PBE (lambda (n) `(call (function (n)
+                                                ;(var (rec (function (y) (if (op < y 2) (return 1) (return (op * y (call rec (op - y 1))))))))
+                                                ;(if
+                                                 ;(op ===
+                                                     ;(call (function (x)
+                                                                     ;(var (counter 0) (total 1))
+                                                                     ;(for ((var (loop-var 1)) (op < loop-var (op + x 1)) (:= loop-var (op + loop-var 1)))
+                                                                       ;(:= total (op * total loop-var))
+                                                                       ;(if (op < (op * n n) counter)
+                                                                           ;(return 0)
+                                                                           ;(:= counter (op + counter 1)))
+                                                                       ;)
+                                                                     ;(return total)
+                                                                     ;) n)
+                                                     ;(call rec n))
+                                                 ;(return #t)
+                                                 ;(return undefined))
+                                                ;)
+                                      ;,n))
+                            ;`(((3) ,(jbool #t))
+                              ;((4) ,(jbool #t))))
+              ;)
+         ;'((_.0 _.1 _.2)))
+  ;(test= "Imperative->recursive"
+         ;(run 1 (REC)
+              ;(PBE (lambda (n) `(call (function (n)
+                                                ;(var (rec (function (y) ,REC)))
+                                                ;(if
+                                                 ;(op ===
+                                                     ;(call (function (x)
+                                                                     ;(var (counter 0) (total 1))
+                                                                     ;(for ((var (loop-var 1)) (op < loop-var (op + x 1)) (:= loop-var (op + loop-var 1)))
+                                                                       ;(:= total (op * total loop-var))
+                                                                       ;(if (op < (op * n n) counter)
+                                                                           ;(return 0)
+                                                                           ;(:= counter (op + counter 1)))
+                                                                       ;)
+                                                                     ;(return total)
+                                                                     ;) n)
+                                                     ;(call rec n))
+                                                 ;(return #t)
+                                                 ;(return undefined))
+                                                ;)
+                                      ;,n))
+                            ;`(((1) ,(jbool #t))
+                              ;((3) ,(jbool #t))
+                              ;((4) ,(jbool #t))))
+              ;)
+         ;'((_.0 _.1 _.2)))
+  ;(test= "Recursive->iterative (while)"
+         ;(run 1 (COND BODY DECL PROG RET)
+              ;(PBE (lambda (n) `(call (function (n)
+                                                ;(var (rec (function (y) (if (op < y 2) (return 1) (return (op * y (call rec (op - y 1)))))))
+                                                     ;(iter (function (x)
+                                                                     ;(var (counter 0) . ,DECL)
+                                                                     ;(while ,COND
+                                                                       ;,BODY
+                                                                       ;(if (op < (op * n n) counter)
+                                                                           ;(return #f)
+                                                                           ;(:= counter (op + counter 1))))
+                                                                     ;(return ,RET)
+                                                                     ;)))
+                                                ;(return (op === (call iter n) (call rec n))))
+                                      ;,n))
+                            ;`(((1) ,(jbool #t))
+                              ;((3) ,(jbool #t))
+                              ;((4) ,(jbool #t))))
+              ;)
+         ;'((_.0 _.1 _.2)))
+  ;(test= "Recursive->iterative"
+         ;(run 1 (COND BODY DECL PROG)
+              ;(PBE (lambda (n) `(call (function (n)
+                                                ;(var (rec (function (y) (if (op < y 2) (return 1) (return (op * y (call rec (op - y 1))))))))
+                                                ;(if
+                                                 ;(op ===
+                                                     ;(call (function (x)
+                                                                     ;(var (counter 0))
+                                                                     ;(for ((var . ,DECL) (op < loop-var (op + x 1)) (:= loop-var (op + loop-var 1)))
+                                                                       ;,BODY
+                                                                       ;(if (op < (op * n n) counter)
+                                                                           ;(return 0)
+                                                                           ;(:= counter (op + counter 1)))
+                                                                       ;)
+                                                                     ;(return total)
+                                                                     ;) n)
+                                                     ;(call rec n))
+                                                 ;(return #t)
+                                                 ;(return undefined))
+                                                ;)
+                                      ;,n))
+                            ;`(((3) ,(jbool #t))
+                              ;((4) ,(jbool #t))))
+              ;)
+         ;'((_.0 _.1 _.2)))
   )
