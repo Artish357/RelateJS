@@ -323,9 +323,20 @@
                    ((membero el toremove)
                     (differenceo rest toremove remaining)))))))
 
+(define (humanize-string x)
+  (define (humanize-char x)
+    (define n (mknum->num x))
+    (if (integer? n) (integer->char n) n))
+  (if (list? x)
+    (let ((cs (map humanize-char x)))
+      (if (andmap char? cs) (list->string cs) `(string ,cs)))
+    `(string ,x)))
+
 (define/match (humanize stmt)
-  [((list 'string x)) (list->string (map (compose integer->char mknum->num) x))]
-  [((list 'number x)) (mknum->num x)]
+  [((list 'string x)) (humanize-string x)]
+  [((list 'number x))
+   (define result (mknum->num x))
+   (if (integer? result) result `(number ,result))]
   [((list)) '()]
   [((? list?)) (cons (humanize (car stmt)) (humanize (cdr stmt)))]
   [(_) stmt])
@@ -337,7 +348,7 @@
   [((? list?)) (cons (dehumanize (car stmt)) (dehumanize (cdr stmt)))]
   [(_) stmt])
 
-(define/match (mknum->num x)
-  [((list)) 0]
-  [((cons d rest)) (+ d (* 2 (mknum->num rest)))]
-  [(_) x])
+(define (mknum->num xs)
+  (if (andmap integer? xs)
+    (foldr (lambda (d n) (+ d (* 2 n))) 0 xs)
+    xs))
