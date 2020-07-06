@@ -19,6 +19,80 @@
                         (time expr))
                  output))
 
+  (define (PBE/schema example)
+    (PBE (lambda x
+           `(call (function (obj schema)
+                            (var (not (function (b) (if b (return #f) (return #t)))))
+                            (while (call not (op === schema (null)))
+                                   (var (field_spec (@ schema "car")))
+                                   (var (field (@ obj (@ field_spec "name"))))
+                                   (if (op === field (undefined))
+                                     (return #f) #t)
+                                   (if (call not (op === (op typeof field) (@ field_spec "type")))
+                                     (return #f) #t)
+                                   (var (min (@ field_spec "minimum"))
+                                        (max (@ field_spec "maximum")))
+                                   (if (call not (op === min (undefined)))
+                                     (if (call not (op < min (op + field 1)))
+                                       (return #f) #t)
+                                     #t)
+                                   (if (call not (op === max (undefined)))
+                                     (if (call not (op < field (op + max 1)))
+                                       (return #f) #t)
+                                     #t)
+                                   (:= schema (@ schema "cdr")))
+                            (return #t))
+                  . ,x))
+         `(,example)))
+
+  (test= "Schema validator as generator 1 (?)"
+         (map humanize
+              (run 1 (INPUT1 INPUT2)
+                (PBE/schema
+                  `(((object (,INPUT1 ,INPUT2)
+                             ("age" 14))
+                     (object ("car" (object ("name" "name")
+                                            ("type" "string")))
+                             ("cdr" (object ("car" (object ("name"    "age")
+                                                           ("type"    "number")
+                                                           ("minimum" 14)
+                                                           ("maximum" 100)))
+                                            ("cdr" (null))))))
+                    ,(jbool #t)))))
+         '(("name" (string _.0))))
+
+  (test= "Schema validator as generator 2 (?)"
+         (map humanize
+              (run 1 (INPUT1 INPUT2)
+                (PBE/schema
+                  `(((object (,INPUT1 "Bob")
+                             ("age" ,INPUT2))
+                     (object ("car" (object ("name" "name")
+                                            ("type" "string")))
+                             ("cdr" (object ("car" (object ("name"    "age")
+                                                           ("type"    "number")
+                                                           ("minimum" 14)
+                                                           ("maximum" 15)))
+                                            ("cdr" (null))))))
+                    ,(jbool #t)))))
+         '(("name" 14)))
+
+  (test= "Schema validator as generator 3 (?)"
+         (map humanize
+              (run 1 (INPUT1 INPUT2)
+                (PBE/schema
+                  `(((object ("name" "Robert")
+                             ("age" 25))
+                     (object ("car" (object ("name" "name")
+                                            ("type" "string")))
+                             ("cdr" (object ("car" (object ("name"    "age")
+                                                           ("type"    ,INPUT1)
+                                                           ("minimum" ,INPUT2)
+                                                           ("maximum" 100)))
+                                            ("cdr" (null))))))
+                    ,(jbool #t)))))
+         '(("number" 0)))
+
   (test= "Modulo operator as generator (24 seconds)"
          (map humanize
               (run 10 (INPUT)
