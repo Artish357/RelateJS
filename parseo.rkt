@@ -323,21 +323,21 @@
                    ((membero el toremove)
                     (differenceo rest toremove remaining)))))))
 
-(define/match (humanize stmt )
+(define/match (humanize stmt)
   [((list 'string x)) (list->string (map (compose integer->char mknum->num) x))]
   [((list 'number x)) (mknum->num x)]
   [((list)) '()]
-  [((? list?)) (cons (humanize (car stmt )) (humanize (cdr stmt )))]
-  [(_) stmt ])
+  [((? list?)) (cons (humanize (car stmt)) (humanize (cdr stmt)))]
+  [(_) stmt])
 
-(define/match (dehumanize stmt )
-  [((? string?)) (jstr stmt )]
-  [((? integer?)) (jnum stmt )]
+(define/match (dehumanize stmt)
+  [((? string?)) (jstr stmt)]
+  [((? integer?)) (jnum stmt)]
   [((list)) '()]
-  [((? list?)) (cons (dehumanize (car stmt )) (dehumanize (cdr stmt )))]
-  [(_) stmt ])
+  [((? list?)) (cons (dehumanize (car stmt)) (dehumanize (cdr stmt)))]
+  [(_) stmt])
 
 (define/match (mknum->num x)
   [((list)) 0]
   [((cons d rest)) (+ d (* 2 (mknum->num rest)))]
-  [(_) (begin x)])
+  [(_) x])
