@@ -45,53 +45,53 @@
                   . ,x))
          `(,example)))
 
-  (test= "Schema validator as generator 1 (?)"
-         (map humanize
-              (run 1 (INPUT1 INPUT2)
-                (PBE/schema
-                  `(((object (,INPUT1 ,INPUT2)
-                             ("age" 14))
-                     (object ("car" (object ("name" "name")
-                                            ("type" "string")))
-                             ("cdr" (object ("car" (object ("name"    "age")
-                                                           ("type"    "number")
-                                                           ("minimum" 14)
-                                                           ("maximum" 100)))
-                                            ("cdr" (null))))))
-                    ,(jbool #t)))))
-         '(("name" (string _.0))))
+  ;(test= "Schema validator as generator 1 (?)"
+         ;(map humanize
+              ;(run 1 (INPUT1 INPUT2)
+                ;(PBE/schema
+                  ;`(((object (,INPUT1 ,INPUT2)
+                             ;("age" 14))
+                     ;(object ("car" (object ("name" "name")
+                                            ;("type" "string")))
+                             ;("cdr" (object ("car" (object ("name"    "age")
+                                                           ;("type"    "number")
+                                                           ;("minimum" 14)
+                                                           ;("maximum" 100)))
+                                            ;("cdr" (null))))))
+                    ;,(jbool #t)))))
+         ;'(("name" (string _.0))))
 
-  (test= "Schema validator as generator 2 (?)"
-         (map humanize
-              (run 1 (INPUT1 INPUT2)
-                (PBE/schema
-                  `(((object (,INPUT1 "Bob")
-                             ("age" ,INPUT2))
-                     (object ("car" (object ("name" "name")
-                                            ("type" "string")))
-                             ("cdr" (object ("car" (object ("name"    "age")
-                                                           ("type"    "number")
-                                                           ("minimum" 14)
-                                                           ("maximum" 15)))
-                                            ("cdr" (null))))))
-                    ,(jbool #t)))))
-         '(("name" 14)))
+  ;(test= "Schema validator as generator 2 (?)"
+         ;(map humanize
+              ;(run 1 (INPUT1 INPUT2)
+                ;(PBE/schema
+                  ;`(((object (,INPUT1 "Bob")
+                             ;("age" ,INPUT2))
+                     ;(object ("car" (object ("name" "name")
+                                            ;("type" "string")))
+                             ;("cdr" (object ("car" (object ("name"    "age")
+                                                           ;("type"    "number")
+                                                           ;("minimum" 14)
+                                                           ;("maximum" 15)))
+                                            ;("cdr" (null))))))
+                    ;,(jbool #t)))))
+         ;'(("name" 14)))
 
-  (test= "Schema validator as generator 3 (?)"
-         (map humanize
-              (run 1 (INPUT1 INPUT2)
-                (PBE/schema
-                  `(((object ("name" "Robert")
-                             ("age" 25))
-                     (object ("car" (object ("name" "name")
-                                            ("type" "string")))
-                             ("cdr" (object ("car" (object ("name"    "age")
-                                                           ("type"    ,INPUT1)
-                                                           ("minimum" ,INPUT2)
-                                                           ("maximum" 100)))
-                                            ("cdr" (null))))))
-                    ,(jbool #t)))))
-         '(("number" 0)))
+  ;(test= "Schema validator as generator 3 (?)"
+         ;(map humanize
+              ;(run 1 (INPUT1 INPUT2)
+                ;(PBE/schema
+                  ;`(((object ("name" "Robert")
+                             ;("age" 25))
+                     ;(object ("car" (object ("name" "name")
+                                            ;("type" "string")))
+                             ;("cdr" (object ("car" (object ("name"    "age")
+                                                           ;("type"    ,INPUT1)
+                                                           ;("minimum" ,INPUT2)
+                                                           ;("maximum" 100)))
+                                            ;("cdr" (null))))))
+                    ;,(jbool #t)))))
+         ;'(("number" 0)))
 
   (test= "Modulo operator as generator (24 seconds)"
          (map humanize
@@ -116,140 +116,143 @@
            (op char->nat "C")
            127))
 
-  ;   (test= "Puzzle (~150 milliseconds)"
-;          (run 5
-;            (BLANK)
-;            (fresh (code store)
-;              (parseo/readable
-;                `(call (function (x)
-;                                 (return (call (function ()
-;                                                         (if #f    ; condition
-;                                                           ,BLANK  ; then-branch statement
-;                                                           #f)     ; else-branch statement
-;                                                         (return x)))))
-;                       42)
-;                code)
-;              (evalo code (jundef) store)))
-;          '(((var (x _.0)) (sym _.0))
-;            (var (x #t))
-;            (var (x #f))
-;            (var x)
-;            (var (x (op _.0)))))
-;
-;   (test= "Fibonacci recursive (~125 milliseconds)"
-;          (run 1 (BLANK) (PBE (lambda (n)
-;                                `(call (function ()
-;                                                 (var (fib (function (x)
-;                                                                     (if (op < x 2)
-;                                                                       (return x)
-;                                                                       (return (op +
-;                                                                                   (call fib (op - x 1))
-;                                                                                   (call fib (op - x 2))))))))
-;                                                 (return (call fib ,n)))))
-;                              `(((2) ,(jnum 1))
-;                                ((5) ,(jnum 5)))))
-;          '(_.0))
-;   (test= "Fibonacci recursive, condition (~32 seconds)"
-;          (run 1 (BLANK) (PBE (lambda (n)
-;                                `(call (function ()
-;                                                 (var (fib (function (x)
-;                                                                     (if ,BLANK
-;                                                                       (return x)
-;                                                                       (return (op +
-;                                                                                   (call fib (op - x 1))
-;                                                                                   (call fib (op - x 2))))))))
-;                                                 (return (call fib ,n)))))
-;                              `(((2) ,(jnum 1))
-;                                ((5) ,(jnum 5)))))
-;          '(_.0))
-;   (test= "Fibonacci recursive, base case (~270 milliseconds)"
-;          (run 1 (BLANK) (PBE (lambda (n)
-;                                `(call (function ()
-;                                                 (var (fib (function (x)
-;                                                                     (if (op < x 2)
-;                                                                       ,BLANK
-;                                                                       (return (op +
-;                                                                                   (call fib (op - x 1))
-;                                                                                   (call fib (op - x 2))))))))
-;                                                 (return (call fib ,n)))))
-;                              `(((2) ,(jnum 1))
-;                                ((5) ,(jnum 5)))))
-;          '((return x)))
-;   (test= "Fibonacci recursive, first subtraction operation description (~68 seconds)"
-;          (run 1 (BLANK) (PBE (lambda (n)
-;                                `(call (function ()
-;                                                 (var (fib (function (x)
-;                                                                     (if (op < x 2)
-;                                                                       (return x)
-;                                                                       (return (op +
-;                                                                                   (call fib (op . ,BLANK))
-;                                                                                   (call fib (op - x 2))))))))
-;                                                 (return (call fib ,n)))))
-;                              `(((2) ,(jnum 1))
-;                                ((5) ,(jnum 5)))))
-;          '((- x (number (1)))))
-;   (test= "Fibonacci recursive, second subtraction operation description (~10 seconds)"
-;          (run 1 (BLANK) (PBE (lambda (n)
-;                                `(call (function ()
-;                                                 (var (fib (function (x)
-;                                                                     (if (op < x 2)
-;                                                                       (return x)
-;                                                                       (return (op +
-;                                                                                   (call fib (op - x 1))
-;                                                                                   (call fib (op . ,BLANK))))))))
-;                                                 (return (call fib ,n)))))
-;                              `(((2) ,(jnum 1))
-;                                ((5) ,(jnum 5)))))
-;          '((- x (number (0 1)))))
-;
-;   (test= "Range sum (~35 milliseconds)"
-;          (run 1 (_)
-;            (PBE (lambda (n)
-;                   `(call (function (n)
-;                                    (var (total 0))
-;                                    (for ((var (i 0)) (op < i n) (:= i (op + i 1)))
-;                                      (:= total (op + total i)))
-;                                    (return total))
-;                          ,n))
-;                 `(((3) ,(jnum 3))
-;                   ((4) ,(jnum 6)))))
-;          '(_.0))
-;   (test= "Range sum, total declaration and initialization (~390 milliseconds)"
-;          (run 1 (BLANK)
-;            (PBE (lambda (n)
-;                   `(call (function (n)
-;                                    ,BLANK
-;                                    (for ((var (i 0)) (op < i n) (:= i (op + i 1)))
-;                                      (:= total (op + total i)))
-;                                    (return total))
-;                          ,n))
-;                 `(((3) ,(jnum 3))
-;                   ((4) ,(jnum 6)))))
-;          '((var (total (number ())))))
-;   (test= "Range sum, i declaration and initialization (~160 milliseconds)"
-;          (run 1 (BLANK)
-;            (PBE (lambda (n)
-;                   `(call (function (n)
-;                                    (var (total 0))
-;                                    (for (,BLANK (op < i n) (:= i (op + i 1)))
-;                                      (:= total (op + total i)))
-;                                    (return total))
-;                          ,n))
-;                 `(((3) ,(jnum 3))
-;                   ((4) ,(jnum 6)))))
-;          '((var (i total))))
-;   (test= "Range sum, end condition (~540 milliseconds)"
-;          (run 1 (BLANK)
-;            (PBE (lambda (n)
-;                   `(call (function (n)
-;                                    (var (total 0))
-;                                    (for ((var (i 0)) ,BLANK (:= i (op + i 1)))
-;                                      (:= total (op + total i)))
-;                                    (return total))
-;                          ,n))
-;                 `(((3) ,(jnum 3))
-;                   ((4) ,(jnum 6)))))
-;          '((op < i n)))
+   (test= "Puzzle (~150 milliseconds)"
+          (run 5
+            (BLANK)
+            (fresh (code store)
+              (parseo/readable
+                `(call (function (x)
+                                 (return (call (function ()
+                                                         (if #f    ; condition
+                                                           ,BLANK  ; then-branch statement
+                                                           #f)     ; else-branch statement
+                                                         (return x)))))
+                       42)
+                code)
+              (evalo code (jundef) store)))
+          '(((var (x _.0)) (sym _.0))
+            (var (x #t))
+            (var (x #f))
+            (var x)
+            (var (x (op _.0)))))
+
+   (test= "Fibonacci recursive (~125 milliseconds)"
+          (run 1 (BLANK) (PBE (lambda (n)
+                                `(call (function ()
+                                                 (var (fib (function (x)
+                                                                     (if (op < x 2)
+                                                                       (return x)
+                                                                       (return (op +
+                                                                                   (call fib (op - x 1))
+                                                                                   (call fib (op - x 2))))))))
+                                                 (return (call fib ,n)))))
+                              `(((2) ,(jnum 1))
+                                ((5) ,(jnum 5)))))
+          '(_.0))
+   (test= "Fibonacci recursive, condition (~32 seconds)"
+          (map humanize
+               (run 1 (BLANK) (PBE (lambda (n)
+                                     `(call (function ()
+                                                      (var (fib (function (x)
+                                                                          (if ,BLANK
+                                                                            (return x)
+                                                                            (return (op +
+                                                                                        (call fib (op - x 1))
+                                                                                        (call fib (op - x 2))))))))
+                                                      (return (call fib ,n)))))
+                                   `(((2) ,(jnum 1))
+                                     ((5) ,(jnum 5))))))
+          '((op < x 2)))
+   (test= "Fibonacci recursive, base case (~270 milliseconds)"
+          (run 1 (BLANK) (PBE (lambda (n)
+                                `(call (function ()
+                                                 (var (fib (function (x)
+                                                                     (if (op < x 2)
+                                                                       ,BLANK
+                                                                       (return (op +
+                                                                                   (call fib (op - x 1))
+                                                                                   (call fib (op - x 2))))))))
+                                                 (return (call fib ,n)))))
+                              `(((2) ,(jnum 1))
+                                ((5) ,(jnum 5)))))
+          '((return x)))
+   (test= "Fibonacci recursive, first subtraction operation description (~68 seconds)"
+          (map humanize
+               (run 1 (BLANK) (PBE (lambda (n)
+                                     `(call (function ()
+                                                      (var (fib (function (x)
+                                                                          (if (op < x 2)
+                                                                            (return x)
+                                                                            (return (op +
+                                                                                        (call fib (op . ,BLANK))
+                                                                                        (call fib (op - x 2))))))))
+                                                      (return (call fib ,n)))))
+                                   `(((2) ,(jnum 1))
+                                     ((5) ,(jnum 5))))))
+          '((- x 1)))
+   (test= "Fibonacci recursive, second subtraction operation description (~10 seconds)"
+          (map humanize
+               (run 1 (BLANK) (PBE (lambda (n)
+                                     `(call (function ()
+                                                      (var (fib (function (x)
+                                                                          (if (op < x 2)
+                                                                            (return x)
+                                                                            (return (op +
+                                                                                        (call fib (op - x 1))
+                                                                                        (call fib (op . ,BLANK))))))))
+                                                      (return (call fib ,n)))))
+                                   `(((2) ,(jnum 1))
+                                     ((5) ,(jnum 5))))))
+          '((- x 2)))
+
+   (test= "Range sum (~35 milliseconds)"
+          (run 1 (_)
+            (PBE (lambda (n)
+                   `(call (function (n)
+                                    (var (total 0))
+                                    (for ((var (i 0)) (op < i n) (:= i (op + i 1)))
+                                      (:= total (op + total i)))
+                                    (return total))
+                          ,n))
+                 `(((3) ,(jnum 3))
+                   ((4) ,(jnum 6)))))
+          '(_.0))
+   (test= "Range sum, total declaration and initialization (~390 milliseconds)"
+          (run 1 (BLANK)
+            (PBE (lambda (n)
+                   `(call (function (n)
+                                    ,BLANK
+                                    (for ((var (i 0)) (op < i n) (:= i (op + i 1)))
+                                      (:= total (op + total i)))
+                                    (return total))
+                          ,n))
+                 `(((3) ,(jnum 3))
+                   ((4) ,(jnum 6)))))
+          '((var (total (number ())))))
+   (test= "Range sum, i declaration and initialization (~160 milliseconds)"
+          (run 1 (BLANK)
+            (PBE (lambda (n)
+                   `(call (function (n)
+                                    (var (total 0))
+                                    (for (,BLANK (op < i n) (:= i (op + i 1)))
+                                      (:= total (op + total i)))
+                                    (return total))
+                          ,n))
+                 `(((3) ,(jnum 3))
+                   ((4) ,(jnum 6)))))
+          '((var (i total))))
+   (test= "Range sum, end condition (~540 milliseconds)"
+          (run 1 (BLANK)
+            (PBE (lambda (n)
+                   `(call (function (n)
+                                    (var (total 0))
+                                    (for ((var (i 0)) ,BLANK (:= i (op + i 1)))
+                                      (:= total (op + total i)))
+                                    (return total))
+                          ,n))
+                 `(((3) ,(jnum 3))
+                   ((4) ,(jnum 6)))))
+          '((op < i n)))
 ;   #;(test= "Range sum, increment (?)"
 ;          (run 1 (BLANK)
 ;            (PBE (lambda (n)
@@ -262,18 +265,18 @@
 ;                 `(((3) ,(jnum 3))
 ;                   ((4) ,(jnum 6)))))
 ;          '((:= i (op + i 1))))
-;   (test= "Range sum, assignment right-hand-side (~600 milliseconds)"
-;          (run 1 (BLANK)
-;            (PBE (lambda (n)
-;                   `(call (function (n)
-;                                    (var (total 0))
-;                                    (for ((var (i 0)) (op < i n) (:= i (op + i 1)))
-;                                      (:= total . ,BLANK))
-;                                    (return total))
-;                          ,n))
-;                 `(((3) ,(jnum 3))
-;                   ((4) ,(jnum 6)))))
-;          '(((op + i total))))
+   (test= "Range sum, assignment right-hand-side (~600 milliseconds)"
+          (run 1 (BLANK)
+            (PBE (lambda (n)
+                   `(call (function (n)
+                                    (var (total 0))
+                                    (for ((var (i 0)) (op < i n) (:= i (op + i 1)))
+                                      (:= total . ,BLANK))
+                                    (return total))
+                          ,n))
+                 `(((3) ,(jnum 3))
+                   ((4) ,(jnum 6)))))
+          '(((op + i total))))
 ; (test= "Recursive->iterative (no restriction)"
 ;          (run 1 (BLANK)
 ;            (PBE (lambda (n)
