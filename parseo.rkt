@@ -349,6 +349,6 @@
   [(_) stmt])
 
 (define (mknum->num xs)
-  (if (andmap integer? xs)
+  (if (and (list? xs) (andmap integer? xs))
     (foldr (lambda (d n) (+ d (* 2 n))) 0 xs)
     xs))
