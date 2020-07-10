@@ -69,7 +69,7 @@
        (effect-propagateo value^ value store~ store~ next-address~ next-address~
          (== value^ (value-list `(,key-val ,(jobj obj-bindings))))
          (typeofo key-val (jstr "string") store~)
-         (conde ((membero `(,key-val . ,value) obj-bindings)) ; found
+         (conde ((alist-refo key-val obj-bindings value))     ; found
                 ((== value (jundef))                          ; not found
                  (absent-keyso key-val obj-bindings))))))
     ;; Object field create/update (2.2.4)
