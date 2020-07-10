@@ -15,10 +15,12 @@
             (== k `(,x . ,k2))
             (keyso o2 k2)))))
 
-(define (absent-keyso val obj)
-  (fresh (keys)
-    (keyso obj keys)
-    (not-in-listo val keys)))
+(define (absent-keyso key obj)
+  (conde ((== obj '()))
+         ((fresh (k v rest)
+            (== obj `((,k . ,v) . ,rest))
+            (=/= k key)
+            (absent-keyso key rest)))))
 
 (define (updateo obj key value result)
   (conde ((== obj '())
