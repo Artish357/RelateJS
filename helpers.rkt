@@ -8,13 +8,6 @@
 (define (decremento in out)
   (incremento out in))
 
-(define (keyso o k)
-  (conde ((== o '()) (== k '()))
-         ((fresh (x v o2 k2)
-            (== o `((,x . ,v) . ,o2))
-            (== k `(,x . ,k2))
-            (keyso o2 k2)))))
-
 (define (absent-keyso key obj)
   (conde ((== obj '()))
          ((fresh (k v rest)
@@ -34,15 +27,6 @@
                    ((=/= k key)
                     (== v2 v)
                     (updateo orest key value rrest)))))))
-
-(define (update-objecto obj keys values result)
-  (fresh (k krest v vrest obj^)
-    (conde
-      ((== keys '()) (== values '()) (== result obj))
-      ((== keys `(,k . ,krest))
-       (== values `(,v . ,vrest))
-       (updateo obj k v obj^)
-       (update-objecto obj^ krest vrest result)))))
 
 (define (deleteo obj key result)
   (conde ((== obj '()) (== result '()))
