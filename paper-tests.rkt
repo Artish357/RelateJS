@@ -53,18 +53,7 @@
                             (return #t))
                   . ,x))
          `(,example)))
-    (test= "Range sum, loop body (???)"
-            (run 1 (BLANK)
-                (PBE (lambda (n)
-                    `(call (function (n)
-                                        (var (total 0))
-                                        (for ((var (i 0)) (op < i n) (:= i (op + i 1)))
-                                        ,BLANK)
-                                        (return total))
-                            ,n))
-                    `(((3) ,(jnum 3))
-                    ((4) ,(jnum 6)))))
-            '(((:= total (op + i total)))))
+
   ;(test= "Schema validator as generator 1 (?)"
          ;(map humanize
               ;(run 1 (INPUT1 INPUT2)
