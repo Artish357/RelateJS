@@ -11,6 +11,15 @@
                   (evalo code expected-result store)))
          (== #t #t) examples))
 
+(define (PBE-evalo make-js examples)
+  (foldl (lambda (example prev-goal)
+           (define args            (car  example))
+           (define expected-result (cadr example))
+           (fresh (store)
+                  prev-goal
+                  (evalo (apply make-js args) expected-result store)))
+         (== #t #t) examples))
+
 (module+ test
   (require rackunit)
   (define-syntax-rule (test= name expr output)
