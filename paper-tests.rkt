@@ -53,55 +53,7 @@
                             (return #t))
                   . ,x))
          `(,example)))
-(test= "Range sum i, no declaration, initialization ???"
-        (run 1 (INIT BLANK)
-            (PBE-evalo (lambda (n)
-                `(app
-                    (get
-                        (get
-                        (deref
-                        (allocate
-                        (set
-                            (object ((,(jstr "public") object ())))
-                            ,(jstr "private")
-                            (set
-                            (object ())
-                            ,(jstr "call")
-                            (fun
-                            (n)
-                            (catch
-                            return
-                            (begin
-                                (let n (allocate (var n))
-                                (let total (allocate (undefined))
-                                    (let i (allocate (undefined))
-                                    (begin
-                                        (begin (assign (var total) ,(jnum 0)) (undefined))
-                                        (begin
-                                        (begin
-                                            (begin ,BLANK (undefined))
-                                            (catch
-                                            break
-                                            (while
-                                            (delta < ((deref (var i)) (deref (var n))))
-                                            (begin
-                                                (assign
-                                                (var total)
-                                                (delta + ((deref (var total)) (deref (var i)))))
-                                                (assign (var i) (delta + ((deref (var i)) ,(jnum 1))))))
-                                            e
-                                            (undefined)))
-                                        (throw return (deref (var total))))))))
-                                (undefined))
-                            result
-                            (var result)))))))
-                        ,(jstr "private"))
-                        ,(jstr "call"))
-                    (,(jnum n))))
-                `(((3) ,(jnum 3))
-                ((4) ,(jnum 6)))))
-        `(assign (var i) ,(jnum 0))
-        )
+
   ;(test= "Schema validator as generator 1 (?)"
          ;(map humanize
               ;(run 1 (INPUT1 INPUT2)
@@ -150,7 +102,7 @@
                     ;,(jbool #t)))))
          ;'(("number" 0)))
 
-  (test= "Modulo operator as generator (24 seconds)"
+  #;(test= "Modulo operator as generator (24 seconds)"
          (map humanize
               (run 10 (INPUT)
                 (PBE (lambda x
@@ -206,7 +158,7 @@
                               `(((2) ,(jnum 1))
                                 ((5) ,(jnum 5)))))
           '(_.0))
-   (test= "Fibonacci recursive, condition (~32 seconds)"
+   #;(test= "Fibonacci recursive, condition (~32 seconds)"
           (map humanize
                (run 1 (BLANK) (PBE (lambda (n)
                                      `(call (function ()
@@ -713,4 +665,53 @@
                  `(((3) ,(jnum 3))
                    ((4) ,(jnum 6)))))
           '(((op + i total))))
+    (test= "Range sum i, assignment right-hand-side ???"
+        (run 1 (INIT BLANK)
+            (PBE-evalo (lambda (n)
+                `(app
+                    (get
+                        (get
+                        (deref
+                        (allocate
+                        (set
+                            (object ((,(jstr "public") object ())))
+                            ,(jstr "private")
+                            (set
+                            (object ())
+                            ,(jstr "call")
+                            (fun
+                            (n)
+                            (catch
+                            return
+                            (begin
+                                (let n (allocate (var n))
+                                (let total (allocate (undefined))
+                                    (let i (allocate (undefined))
+                                    (begin
+                                        (begin (assign (var total) ,(jnum 0)) (undefined))
+                                        (begin
+                                        (begin
+                                            (begin (assign (var i) ,(jnum 0)) (undefined))
+                                            (catch
+                                            break
+                                            (while
+                                            (delta < ((deref (var i)) (deref (var n))))
+                                            (begin
+                                                (assign
+                                                (var total)
+                                                (delta + ((deref (var total)) (deref (var i)))))
+                                                (assign (var i) ,BLANK)))
+                                            e
+                                            (undefined)))
+                                        (throw return (deref (var total))))))))
+                                (undefined))
+                            result
+                            (var result)))))))
+                        ,(jstr "private"))
+                        ,(jstr "call"))
+                    (,(jnum n))))
+                `(((3) ,(jnum 3))
+                ((4) ,(jnum 6)))))
+       `(delta + ((deref (var i)) ,(jnum 1)))
+        )
   )
