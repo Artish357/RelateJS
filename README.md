@@ -6,7 +6,7 @@ We introduce a miniKanren relational interpreter for a subset of JavaScript, cap
 
 Created for ICFP2020
 
-Paper about it: [link](example.com)
+[Paper link](example.com)
 
 ## Requirements
 * Racket (Was tested on racket 7.4)
