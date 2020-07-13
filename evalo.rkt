@@ -28,39 +28,80 @@
        (== store store~)
        (== next-address next-address~)
        (lookupo var env value)))
-    ;; Let expressions (Section 2.2.2)
-    ((fresh (lhs-var          ; variable being bound
-             rhs-expr rhs-val ; right-hand side expression & value
-             store^ next-address^ ; store produced by evaluating the rhs
-             body
-             let-env)         ; environment after the let binding
-       (== expr (jlet lhs-var rhs-expr body))
-       (eval-envo rhs-expr env rhs-val store store^ next-address next-address^)
-       (effect-propagateo rhs-val value store^ store~
-                          next-address^ next-address~
-         (== let-env `((,lhs-var . ,rhs-val) . ,env))
-         (eval-envo body let-env value store^ store~
-                    next-address^ next-address~))))
-    ;; Function definition (Section 2.2.4)
-    ((fresh (body params)
-       (== expr (jfun params body))
-       (== value (jclo params body env))
-       (== store store~)
-       (== next-address next-address~)))
-    ;; Function application (Section 2.2.4)
-    ((fresh (func params rands args body
-             param-arg-bindings
-             cenv cenv^ ; closure environment before/after param-arg-bindings
-             value^ store^ next-address^)
-       (== expr (japp func rands))
-       (eval-env-listo `(,func . ,rands) env value^ store store^
-                       next-address next-address^)
-       (effect-propagateo value^ value store^ store~ next-address^ next-address~
-         (== value^ (value-list `(,(jclo params body cenv) . ,args)))
-         (zipo params args param-arg-bindings)
-         (appendo param-arg-bindings cenv cenv^)
-         (eval-envo body cenv^ value store^ store~
-                    next-address^ next-address~))))
+    ;; Builtin operations (Section 3.2.5)
+    ((fresh (rator rands args value^)
+       (== expr (jdelta rator rands))
+       (eval-env-listo rands env value^ store store~ next-address next-address~)
+       (effect-propagateo value^ value store~ store~ next-address~ next-address~
+         (== value^ (value-list args))
+         (conde
+           ((fresh (v1 v2 digits1 digits2 result remainder) ; numeric operations
+              (== `(,v1 ,v2) args)
+              (typeofo v1 (jstr "number") store~)
+              (typeofo v2 (jstr "number") store~)
+              (== `(,(jrawnum digits1) ,(jrawnum digits2)) args)
+              (conde ((== rator '+)
+                      (== value (jrawnum result))
+                      (pluso digits1 digits2 result))
+                     ((== rator '-)
+                      (== value (jrawnum result))
+                      (minuso digits1 digits2 result))
+                     ((== rator '*)
+                      (== value (jrawnum result))
+                      (*o digits1 digits2 result))
+                     ((== rator '/)
+                      (== value (jrawnum result))
+                      (/o digits1 digits2 result remainder))
+                     ((== rator '<)
+                      (conde ((== value (jbool #t)) (<o digits1 digits2))
+                             ((== value (jbool #f)) (<=o digits2 digits1)))))))
+           ((fresh (v1 v2) ; ===
+              (== `(,rator ,args) `(=== (,v1 ,v2)))
+              (conde ((== value (jbool #t)) (== v1 v2))
+                     ((== value (jbool #f)) (=/= v1 v2)))))
+           ((fresh (v1) ; typeof
+              (== `(,rator (,v1)) `(typeof ,args))
+              (typeofo v1 value store~)))
+           ((fresh (str char) ; char->nat
+              (== `(,str) args)
+              (typeofo str (jstr "string") store~)
+              (== `(,(jrawstr `(,char))) args)
+              (== rator 'char->nat)
+              (== value (jrawnum char))))
+           ((fresh (num digits) ; nat->char
+              (== `(,num) args)
+              (typeofo num (jstr "number") store~)
+              (== `(,(jrawnum digits)) args)
+              (== rator 'nat->char)
+              (== value (jrawstr `(,digits)))))
+           ((fresh (v1 v2 chars1 chars2 result) ; string operations
+              (== `(,v1 ,v2) args)
+              (typeofo v1 (jstr "string") store~)
+              (typeofo v2 (jstr "string") store~)
+              (== `(,(jrawstr chars1) ,(jrawstr chars2)) args)
+              (conde ((== rator 'string+)
+                      (== value (jrawstr result))
+                      (appendo chars1 chars2 result))
+                     ((== rator 'string<)
+                      (string-lesso chars1 chars2 value)))))))))
+    ;; Mutable references: dereferencing (Section 2.2.3)
+    ((fresh (addr-expr addr-val value^)
+       (== expr (jderef addr-expr))
+       (eval-envo addr-expr env value^ store store~
+                  next-address next-address~)
+       (effect-propagateo value^ value store~ store~
+                          next-address~ next-address~
+         (== value^ (jref addr-val))
+         (indexo store~ addr-val value))))
+    ;; Mutable references: assignment (Section 2.2.3)
+    ((fresh (addr-expr addr-val stored-expr stored-val store^ value^)
+       (== expr (jassign addr-expr stored-expr))
+       (eval-env-listo `(,addr-expr ,stored-expr) env value^ store store^
+                       next-address next-address~)
+       (effect-propagateo value^ value store^ store~ next-address~ next-address~
+         (== value^ (value-list `(,(jref addr-val) ,stored-val)))
+         (== value stored-val)
+         (set-indexo store^ addr-val stored-val store~))))
     ;; Object field retrieval (2.2.4)
     ((fresh (obj-expr obj-bindings key-expr key-val value^)
        (== expr (jget obj-expr key-expr))
@@ -83,6 +124,57 @@
          (== value (jobj obj-bindings^))
          (typeofo key-val (jstr "string") store~)
          (updateo obj-bindings key-val rhs-val obj-bindings^))))
+    ;; Function application (Section 2.2.4)
+    ((fresh (func params rands args body
+             param-arg-bindings
+             cenv cenv^ ; closure environment before/after param-arg-bindings
+             value^ store^ next-address^)
+       (== expr (japp func rands))
+       (eval-env-listo `(,func . ,rands) env value^ store store^
+                       next-address next-address^)
+       (effect-propagateo value^ value store^ store~ next-address^ next-address~
+         (== value^ (value-list `(,(jclo params body cenv) . ,args)))
+         (zipo params args param-arg-bindings)
+         (appendo param-arg-bindings cenv cenv^)
+         (eval-envo body cenv^ value store^ store~
+                    next-address^ next-address~))))
+    ;; Throw expressions (Section 2.2.5)
+    ((fresh (label thrown-expr thrown-val) ;; Throw
+       (== expr (jthrow label thrown-expr))
+       (eval-envo thrown-expr env thrown-val store store~
+                  next-address next-address~)
+       (effect-propagateo thrown-val value store~ store~
+                          next-address~ next-address~
+         (== value (jbrk label thrown-val)))))
+    ;; Let expressions (Section 2.2.2)
+    ((fresh (lhs-var          ; variable being bound
+             rhs-expr rhs-val ; right-hand side expression & value
+             store^ next-address^ ; store produced by evaluating the rhs
+             body
+             let-env)         ; environment after the let binding
+       (== expr (jlet lhs-var rhs-expr body))
+       (eval-envo rhs-expr env rhs-val store store^ next-address next-address^)
+       (effect-propagateo rhs-val value store^ store~
+                          next-address^ next-address~
+         (== let-env `((,lhs-var . ,rhs-val) . ,env))
+         (eval-envo body let-env value store^ store~
+                    next-address^ next-address~))))
+    ;; Function definition (Section 2.2.4)
+    ((fresh (body params)
+       (== expr (jfun params body))
+       (== value (jclo params body env))
+       (== store store~)
+       (== next-address next-address~)))
+    ;; Mutable references: memory allocation (Section 2.2.3)
+    ((fresh (stored-expr stored-val next-address^ store^)
+       (== expr (jall stored-expr))
+       (eval-envo stored-expr env stored-val store store^
+                  next-address next-address^)
+       (effect-propagateo stored-val value store^ store~
+                          next-address^ next-address~
+         (== value (jref next-address^))
+         (appendo store^ `(,stored-val) store~)
+         (incremento next-address^ next-address~))))
     ;; Object field delete (Section 2.2.4)
     ((fresh (obj-expr obj-bindings obj-bindings^
              key-expr key-val value^)
@@ -94,34 +186,6 @@
          (== value (jobj obj-bindings^))
          (typeofo key-val (jstr "string") store~)
          (deleteo obj-bindings key-val obj-bindings^))))
-    ;; Mutable references: memory allocation (Section 2.2.3)
-    ((fresh (stored-expr stored-val next-address^ store^)
-       (== expr (jall stored-expr))
-       (eval-envo stored-expr env stored-val store store^
-                  next-address next-address^)
-       (effect-propagateo stored-val value store^ store~
-                          next-address^ next-address~
-         (== value (jref next-address^))
-         (appendo store^ `(,stored-val) store~)
-         (incremento next-address^ next-address~))))
-    ;; Mutable references: dereferencing (Section 2.2.3)
-    ((fresh (addr-expr addr-val value^)
-       (== expr (jderef addr-expr))
-       (eval-envo addr-expr env value^ store store~
-                  next-address next-address~)
-       (effect-propagateo value^ value store~ store~
-                          next-address~ next-address~
-         (== value^ (jref addr-val))
-         (indexo store~ addr-val value))))
-    ;; Mutable references: assignment (Section 2.2.3)
-    ((fresh (addr-expr addr-val stored-expr stored-val store^ value^)
-       (== expr (jassign addr-expr stored-expr))
-       (eval-env-listo `(,addr-expr ,stored-expr) env value^ store store^
-                       next-address next-address~)
-       (effect-propagateo value^ value store^ store~ next-address~ next-address~
-         (== value^ (value-list `(,(jref addr-val) ,stored-val)))
-         (== value stored-val)
-         (set-indexo store^ addr-val stored-val store~))))
     ;; Begin expression (Section 2.2.5)
     ((fresh (first-expr second-expr first-val value^)
        (== expr (jbeg first-expr second-expr))
@@ -182,71 +246,7 @@
               ((== try-val (jbrk catch-label break-val)) ; break caught
                (appendo `((,catch-var . ,break-val)) env env^)
                (eval-envo catch-expr env^ value store^ store~
-                          next-address^ next-address~)))))
-    ;; Throw expressions (Section 2.2.5)
-    ((fresh (label thrown-expr thrown-val) ;; Throw
-       (== expr (jthrow label thrown-expr))
-       (eval-envo thrown-expr env thrown-val store store~
-                  next-address next-address~)
-       (effect-propagateo thrown-val value store~ store~
-                          next-address~ next-address~
-         (== value (jbrk label thrown-val)))))
-    ;; Builtin operations (Section 3.2.5)
-    ((fresh (rator rands args value^)
-       (== expr (jdelta rator rands))
-       (eval-env-listo rands env value^ store store~ next-address next-address~)
-       (effect-propagateo value^ value store~ store~ next-address~ next-address~
-         (== value^ (value-list args))
-         (conde
-           ((fresh (v1 v2 digits1 digits2 result remainder) ; numeric operations
-              (== `(,v1 ,v2) args)
-              (typeofo v1 (jstr "number") store~)
-              (typeofo v2 (jstr "number") store~)
-              (== `(,(jrawnum digits1) ,(jrawnum digits2)) args)
-              (conde ((== rator '+)
-                      (== value (jrawnum result))
-                      (pluso digits1 digits2 result))
-                     ((== rator '-)
-                      (== value (jrawnum result))
-                      (minuso digits1 digits2 result))
-                     ((== rator '*)
-                      (== value (jrawnum result))
-                      (*o digits1 digits2 result))
-                     ((== rator '/)
-                      (== value (jrawnum result))
-                      (/o digits1 digits2 result remainder))
-                     ((== rator '<)
-                      (conde ((== value (jbool #t)) (<o digits1 digits2))
-                             ((== value (jbool #f)) (<=o digits2 digits1)))))))
-           ((fresh (v1 v2) ; ===
-              (== `(,rator ,args) `(=== (,v1 ,v2)))
-              (conde ((== value (jbool #t)) (== v1 v2))
-                     ((== value (jbool #f)) (=/= v1 v2)))))
-           ((fresh (v1) ; typeof
-              (== `(,rator (,v1)) `(typeof ,args))
-              (typeofo v1 value store~)))
-           ((fresh (str char) ; char->nat
-              (== `(,str) args)
-              (typeofo str (jstr "string") store~)
-              (== `(,(jrawstr `(,char))) args)
-              (== rator 'char->nat)
-              (== value (jrawnum char))))
-           ((fresh (num digits) ; nat->char
-              (== `(,num) args)
-              (typeofo num (jstr "number") store~)
-              (== `(,(jrawnum digits)) args)
-              (== rator 'nat->char)
-              (== value (jrawstr `(,digits)))))
-           ((fresh (v1 v2 chars1 chars2 result) ; string operations
-              (== `(,v1 ,v2) args)
-              (typeofo v1 (jstr "string") store~)
-              (typeofo v2 (jstr "string") store~)
-              (== `(,(jrawstr chars1) ,(jrawstr chars2)) args)
-              (conde ((== rator 'string+)
-                      (== value (jrawstr result))
-                      (appendo chars1 chars2 result))
-                     ((== rator 'string<)
-                      (string-lesso chars1 chars2 value)))))))))))
+                          next-address^ next-address~)))))))
 
 ;; Sequentially evaluate a list of LambdaJS expressions
 (define (eval-env-listo exprs env vals store store~ next-address next-address~)
