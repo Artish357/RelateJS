@@ -172,6 +172,76 @@
                                    `(((2) ,(jnum 1))
                                      ((5) ,(jnum 5))))))
           '((op < x 2)))
+    (test= "Fibonacci recursive, condition, from LJS(?)"
+        (humanize (run 1 (BLANK)
+            (PBE-evalo (lambda (n) `(app
+                (get
+                    (get
+                        (deref
+                        (allocate
+                        (set
+                        (object ((,(jstr "public") object ())))
+                        ,(jstr "private")
+                        (set
+                            (object ())
+                            ,(jstr "call")
+                            (fun
+                            ()
+                            (catch
+                            return
+                            (begin
+                                (let fib (allocate (undefined))
+                                (begin
+                                    (begin
+                                    (assign
+                                    (var fib)
+                                    (allocate
+                                        (set
+                                        (object ((,(jstr "public") object ())))
+                                        ,(jstr "private")
+                                        (set
+                                        (object ())
+                                        ,(jstr "call")
+                                        (fun
+                                        (x)
+                                        (catch
+                                            return
+                                            (begin
+                                            (let x (allocate (var x))
+                                                (begin
+                                                (if ,BLANK
+                                                    (throw return (deref (var x)))
+                                                    (throw return
+                                                    (delta
+                                                    +
+                                                    ((app (get (get
+                                                        (deref (deref (var fib)))
+                                                        ,(jstr "private"))
+                                                        ,(jstr "call"))
+                                                        ((delta - ((deref (var x)) ,(jnum 1)))))
+                                                    (app (get (get
+                                                        (deref (deref (var fib)))
+                                                        ,(jstr "private"))
+                                                        ,(jstr "call"))
+                                                        ((delta - ((deref (var x)) ,(jnum 2)))))))))
+                                                (undefined)))
+                                            (undefined))
+                                            result
+                                            (var result)))))))
+                                    (undefined))
+                                    (throw
+                                    return
+                                    (app
+                                    (get (get (deref (deref (var fib))) ,(jstr "private")) ,(jstr "call"))
+                                    (,(jnum n))))))
+                                (undefined))
+                            result
+                            (var result)))))))
+                        ,(jstr "private"))
+                ,(jstr "call")) ()))
+            `(((2) ,(jnum 1))
+              ((5) ,(jnum 5)))
+            ))) `(delta < ((deref (var x)) ,(jnum 2))))
    (test= "Fibonacci recursive, base case (~270 milliseconds)"
           (run 1 (BLANK) (PBE (lambda (n)
                                 `(call (function ()
@@ -185,6 +255,76 @@
                               `(((2) ,(jnum 1))
                                 ((5) ,(jnum 5)))))
           '((return x)))
+    (test= "Fibonacci recursive, base case, from LJS(?)"
+        (humanize (run 1 (BLANK)
+            (PBE-evalo (lambda (n) `(app
+                (get
+                    (get
+                        (deref
+                        (allocate
+                        (set
+                        (object ((,(jstr "public") object ())))
+                        ,(jstr "private")
+                        (set
+                            (object ())
+                            ,(jstr "call")
+                            (fun
+                            ()
+                            (catch
+                            return
+                            (begin
+                                (let fib (allocate (undefined))
+                                (begin
+                                    (begin
+                                    (assign
+                                    (var fib)
+                                    (allocate
+                                        (set
+                                        (object ((,(jstr "public") object ())))
+                                        ,(jstr "private")
+                                        (set
+                                        (object ())
+                                        ,(jstr "call")
+                                        (fun
+                                        (x)
+                                        (catch
+                                            return
+                                            (begin
+                                            (let x (allocate (var x))
+                                                (begin
+                                                (if (delta < ((deref (var x)) ,(jnum 2)))
+                                                    ,BLANK
+                                                    (throw return
+                                                    (delta
+                                                    +
+                                                    ((app (get (get
+                                                        (deref (deref (var fib)))
+                                                        ,(jstr "private"))
+                                                        ,(jstr "call"))
+                                                        ((delta - ((deref (var x)) ,(jnum 1)))))
+                                                    (app (get (get
+                                                        (deref (deref (var fib)))
+                                                        ,(jstr "private"))
+                                                        ,(jstr "call"))
+                                                        ((delta - ((deref (var x)) ,(jnum 2)))))))))
+                                                (undefined)))
+                                            (undefined))
+                                            result
+                                            (var result)))))))
+                                    (undefined))
+                                    (throw
+                                    return
+                                    (app
+                                    (get (get (deref (deref (var fib))) ,(jstr "private")) ,(jstr "call"))
+                                    (,(jnum n))))))
+                                (undefined))
+                            result
+                            (var result)))))))
+                        ,(jstr "private"))
+                ,(jstr "call")) ()))
+            `(((2) ,(jnum 1))
+              ((5) ,(jnum 5)))
+            ))) `(throw return (deref (var x))))
    (test= "Fibonacci recursive, first subtraction operation description (~68 seconds)"
           (map humanize
                (run 1 (BLANK) (PBE (lambda (n)
@@ -199,6 +339,76 @@
                                    `(((2) ,(jnum 1))
                                      ((5) ,(jnum 5))))))
           '((- x 1)))
+    (test= "Fibonacci recursive, first subtraction operation description, from LJS(?)"
+        (humanize (run 1 (BLANK)
+            (PBE-evalo (lambda (n) `(app
+                (get
+                    (get
+                        (deref
+                        (allocate
+                        (set
+                        (object ((,(jstr "public") object ())))
+                        ,(jstr "private")
+                        (set
+                            (object ())
+                            ,(jstr "call")
+                            (fun
+                            ()
+                            (catch
+                            return
+                            (begin
+                                (let fib (allocate (undefined))
+                                (begin
+                                    (begin
+                                    (assign
+                                    (var fib)
+                                    (allocate
+                                        (set
+                                        (object ((,(jstr "public") object ())))
+                                        ,(jstr "private")
+                                        (set
+                                        (object ())
+                                        ,(jstr "call")
+                                        (fun
+                                        (x)
+                                        (catch
+                                            return
+                                            (begin
+                                            (let x (allocate (var x))
+                                                (begin
+                                                (if (delta < ((deref (var x)) ,(jnum 2)))
+                                                    (throw return (deref (var x)))
+                                                    (throw return
+                                                    (delta
+                                                    +
+                                                    ((app (get (get
+                                                        (deref (deref (var fib)))
+                                                        ,(jstr "private"))
+                                                        ,(jstr "call"))
+                                                        ((delta . ,BLANK)))
+                                                    (app (get (get
+                                                        (deref (deref (var fib)))
+                                                        ,(jstr "private"))
+                                                        ,(jstr "call"))
+                                                        ((delta - ((deref (var x)) ,(jnum 2)))))))))
+                                                (undefined)))
+                                            (undefined))
+                                            result
+                                            (var result)))))))
+                                    (undefined))
+                                    (throw
+                                    return
+                                    (app
+                                    (get (get (deref (deref (var fib))) ,(jstr "private")) ,(jstr "call"))
+                                    (,(jnum n))))))
+                                (undefined))
+                            result
+                            (var result)))))))
+                        ,(jstr "private"))
+                ,(jstr "call")) ()))
+            `(((2) ,(jnum 1))
+              ((5) ,(jnum 5)))
+            ))) `(- ((deref (var x)) ,(jnum 1))))
    (test= "Fibonacci recursive, second subtraction operation description (~10 seconds)"
           (map humanize
                (run 1 (BLANK) (PBE (lambda (n)
@@ -212,8 +422,79 @@
                                                       (return (call fib ,n)))))
                                    `(((2) ,(jnum 1))
                                      ((5) ,(jnum 5))))))
-          '((- x 2)))
+          '((- x 2))
+           )
 
+    (test= "Fibonacci recursive, second subtraction operation description, from LJS(?)"
+                (humanize (run 1 (BLANK)
+            (PBE-evalo (lambda (n) `(app
+                (get
+                    (get
+                        (deref
+                        (allocate
+                        (set
+                        (object ((,(jstr "public") object ())))
+                        ,(jstr "private")
+                        (set
+                            (object ())
+                            ,(jstr "call")
+                            (fun
+                            ()
+                            (catch
+                            return
+                            (begin
+                                (let fib (allocate (undefined))
+                                (begin
+                                    (begin
+                                    (assign
+                                    (var fib)
+                                    (allocate
+                                        (set
+                                        (object ((,(jstr "public") object ())))
+                                        ,(jstr "private")
+                                        (set
+                                        (object ())
+                                        ,(jstr "call")
+                                        (fun
+                                        (x)
+                                        (catch
+                                            return
+                                            (begin
+                                            (let x (allocate (var x))
+                                                (begin
+                                                (if (delta < ((deref (var x)) ,(jnum 2)))
+                                                    (throw return (deref (var x)))
+                                                    (throw return
+                                                    (delta
+                                                    +
+                                                    ((app (get (get
+                                                        (deref (deref (var fib)))
+                                                        ,(jstr "private"))
+                                                        ,(jstr "call"))
+                                                        ((delta - ((deref (var x)) ,(jnum 1)))))
+                                                    (app (get (get
+                                                        (deref (deref (var fib)))
+                                                        ,(jstr "private"))
+                                                        ,(jstr "call"))
+                                                        ((delta . ,BLANK)))))))
+                                                (undefined)))
+                                            (undefined))
+                                            result
+                                            (var result)))))))
+                                    (undefined))
+                                    (throw
+                                    return
+                                    (app
+                                    (get (get (deref (deref (var fib))) ,(jstr "private")) ,(jstr "call"))
+                                    (,(jnum n))))))
+                                (undefined))
+                            result
+                            (var result)))))))
+                        ,(jstr "private"))
+                ,(jstr "call")) ()))
+            `(((2) ,(jnum 1))
+              ((5) ,(jnum 5)))
+            ))) `(- ((deref (var x)) ,(jnum 2))))
    (test= "Range sum (~35 milliseconds)"
           (run 1 (_)
             (PBE (lambda (n)
