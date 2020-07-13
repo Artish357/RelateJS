@@ -665,19 +665,6 @@
                  `(((3) ,(jnum 3))
                    ((4) ,(jnum 6)))))
           '(((op + i total))))
-
-    (test= "Range sum, loop body (???)"
-            (run 1 (BLANK)
-                (PBE (lambda (n)
-                    `(call (function (n)
-                                        (var (total 0))
-                                        (for ((var (i 0)) (op < i n) (:= i (op + i 1)))
-                                        ,BLANK)
-                                        (return total))
-                            ,n))
-                    `(((3) ,(jnum 3))
-                    ((4) ,(jnum 6)))))
-            '(((:= total (op + i total)))))
     (test= "Range sum i, assignment right-hand-side ???"
         (run 1 (INIT BLANK)
             (PBE-evalo (lambda (n)
@@ -712,8 +699,8 @@
                                             (begin
                                                 (assign
                                                 (var total)
-                                                (delta + ((deref (var total)) (deref (var i)))))
-                                                (assign (var i) ,BLANK)))
+                                                ,BLANK)
+                                                (assign (var i) (delta + ((deref (var i)) ,(jnum 1))))))
                                             e
                                             (undefined)))
                                         (throw return (deref (var total))))))))
@@ -725,6 +712,65 @@
                     (,(jnum n))))
                 `(((3) ,(jnum 3))
                 ((4) ,(jnum 6)))))
-       `(delta + ((deref (var i)) ,(jnum 1)))
+       `(delta + ((deref (var total)) (deref (var i))))
+        )
+    (test= "Range sum, loop body (???)"
+            (run 1 (BLANK)
+                (PBE (lambda (n)
+                    `(call (function (n)
+                                        (var (total 0))
+                                        (for ((var (i 0)) (op < i n) (:= i (op + i 1)))
+                                        ,BLANK)
+                                        (return total))
+                            ,n))
+                    `(((3) ,(jnum 3))
+                    ((4) ,(jnum 6)))))
+            '(((:= total (op + i total)))))
+    (test= "Range sum, loop body, from LJS ???"
+        (run 1 (INIT BLANK)
+            (PBE-evalo (lambda (n)
+                `(app
+                    (get
+                        (get
+                        (deref
+                        (allocate
+                        (set
+                            (object ((,(jstr "public") object ())))
+                            ,(jstr "private")
+                            (set
+                            (object ())
+                            ,(jstr "call")
+                            (fun
+                            (n)
+                            (catch
+                            return
+                            (begin
+                                (let n (allocate (var n))
+                                (let total (allocate (undefined))
+                                    (let i (allocate (undefined))
+                                    (begin
+                                        (begin (assign (var total) ,(jnum 0)) (undefined))
+                                        (begin
+                                        (begin
+                                            (begin (assign (var i) ,(jnum 0)) (undefined))
+                                            (catch
+                                            break
+                                            (while
+                                            (delta < ((deref (var i)) (deref (var n))))
+                                            (begin
+                                                ,BLANK
+                                                (assign (var i) (delta + ((deref (var i)) ,(jnum 1))))))
+                                            e
+                                            (undefined)))
+                                        (throw return (deref (var total))))))))
+                                (undefined))
+                            result
+                            (var result)))))))
+                        ,(jstr "private"))
+                        ,(jstr "call"))
+                    (,(jnum n))))
+                `(((3) ,(jnum 3))
+                ((4) ,(jnum 6)))))
+       `(assign (var total) (delta + ((deref (var total)) (deref (var i)))))
         )
   )
