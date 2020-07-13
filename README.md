@@ -9,10 +9,10 @@ Created for miniKanren 2020 workshop
 [Paper link](example.com)
 
 ## Requirements
-* Racket (Was tested on racket 7.4)
+* [Racket interpreter](https://racket-lang.org/) (Was tested on racket 7.4)
 
 ## Setup
-To run the tests, type the following lines into terminal:
+To set up the repo and run tests, type the following lines into terminal:
 ```bash
 git clone https://github.com/Artish357/RelateJS
 cd RelateJS
