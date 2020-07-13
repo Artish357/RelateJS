@@ -15,7 +15,7 @@ git clone https://github.com/Artish357/RelateJS
 cd RelateJS
 raco test *tests.rkt
 ```
-Look into paper-tests.rkt for examples.
+Look into [paper-tests.rkt](paper-tests.rkt) for examples.
 
 ## License
 MIT
