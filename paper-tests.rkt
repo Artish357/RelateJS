@@ -74,112 +74,71 @@
            (var x)
            (var (x (op _.0)))))
 
-  (test= "Fibonacci recursive (~125 milliseconds)"
-         (run 1 (BLANK) (PBE (lambda (n)
-                               `(call (function ()
-                                                (var (fib (function (x)
-                                                                    (if (op < x 2)
-                                                                      (return x)
-                                                                      (return (op +
-                                                                                  (call fib (op - x 1))
-                                                                                  (call fib (op - x 2))))))))
-                                                (return (call fib ,n)))))
-                             `(((2) ,(jnum 1))
-                               ((5) ,(jnum 5)))))
-         '(_.0))
+  (define (PBE-fibonacci condition base-case recursive-1 recursive-2)
+    (PBE (lambda (n)
+           `(call (function ()
+                            (var (fib (function (x)
+                                                (if ,condition
+                                                  ,base-case
+                                                  (return (op +
+                                                              (call fib (op . ,recursive-1))
+                                                              (call fib (op . ,recursive-2))))))))
+                            (return (call fib ,n)))))
+         `(((2) ,(jnum 1))
+           ((5) ,(jnum 5)))))
 
+  (test= "Fibonacci recursive (~125 milliseconds)"
+         (run 1 (_) (PBE-fibonacci '(op < x 2) '(return x) '(- x 1) '(- x 2)))
+         '(_.0))
   (test= "Fibonacci recursive, base case (~270 milliseconds)"
-         (run 1 (BLANK) (PBE (lambda (n)
-                               `(call (function ()
-                                                (var (fib (function (x)
-                                                                    (if (op < x 2)
-                                                                      ,BLANK
-                                                                      (return (op +
-                                                                                  (call fib (op - x 1))
-                                                                                  (call fib (op - x 2))))))))
-                                                (return (call fib ,n)))))
-                             `(((2) ,(jnum 1))
-                               ((5) ,(jnum 5)))))
+         (run 1 (BLANK) (PBE-fibonacci '(op < x 2) BLANK '(- x 1) '(- x 2)))
          '((return x)))
 
+  (define (PBE-range-sum var-total var-i condition increment body)
+    (PBE (lambda (n)
+           `(call (function (n)
+                            ,var-total
+                            (for (,var-i ,condition ,increment)
+                              ,body)
+                            (return total))
+                  ,n))
+         `(((3) ,(jnum 3))
+           ((4) ,(jnum 6)))))
+
   (test= "Range sum (~35 milliseconds)"
-         (run 1 (_)
-           (PBE (lambda (n)
-                  `(call (function (n)
-                                   (var (total 0))
-                                   (for ((var (i 0)) (op < i n) (:= i (op + i 1)))
-                                     (:= total (op + total i)))
-                                   (return total))
-                         ,n))
-                `(((3) ,(jnum 3))
-                  ((4) ,(jnum 6)))))
+         (map humanize
+              (run 1 (_) (PBE-range-sum '(var (total 0)) '(var (i 0))
+                                        '(op < i n) '(:= i (op + i 1))
+                                        '(:= total (op + total i)))))
          '(_.0))
-
   (test= "Range sum, i declaration and initialization (~160 milliseconds)"
-         (run 1 (BLANK)
-           (PBE (lambda (n)
-                  `(call (function (n)
-                                   (var (total 0))
-                                   (for (,BLANK (op < i n) (:= i (op + i 1)))
-                                     (:= total (op + total i)))
-                                   (return total))
-                         ,n))
-                `(((3) ,(jnum 3))
-                  ((4) ,(jnum 6)))))
+         (map humanize
+              (run 1 (BLANK) (PBE-range-sum '(var (total 0)) BLANK
+                                            '(op < i n) '(:= i (op + i 1))
+                                            '(:= total (op + total i)))))
          '((var (i total))))
-
   (test= "Range sum, total declaration and initialization (~390 milliseconds)"
-         (run 1 (BLANK)
-           (PBE (lambda (n)
-                  `(call (function (n)
-                                   ,BLANK
-                                   (for ((var (i 0)) (op < i n) (:= i (op + i 1)))
-                                     (:= total (op + total i)))
-                                   (return total))
-                         ,n))
-                `(((3) ,(jnum 3))
-                  ((4) ,(jnum 6)))))
-         '((var (total (number ())))))
-
+         (map humanize
+              (run 1 (BLANK) (PBE-range-sum BLANK '(var (i 0))
+                                            '(op < i n) '(:= i (op + i 1))
+                                            '(:= total (op + total i)))))
+         '((var (total 0))))
   (test= "Range sum, end condition (~540 milliseconds)"
-         (run 1 (BLANK)
-           (PBE (lambda (n)
-                  `(call (function (n)
-                                   (var (total 0))
-                                   (for ((var (i 0)) ,BLANK (:= i (op + i 1)))
-                                     (:= total (op + total i)))
-                                   (return total))
-                         ,n))
-                `(((3) ,(jnum 3))
-                  ((4) ,(jnum 6)))))
+         (map humanize
+              (run 1 (BLANK) (PBE-range-sum '(var (total 0)) '(var (i 0))
+                                            BLANK '(:= i (op + i 1))
+                                            '(:= total (op + total i)))))
          '((op < i n)))
-
   (test= "Range sum, assignment right-hand-side (~600 milliseconds)"
-         (run 1 (BLANK)
-           (PBE (lambda (n)
-                  `(call (function (n)
-                                   (var (total 0))
-                                   (for ((var (i 0)) (op < i n) (:= i (op + i 1)))
-                                     (:= total . ,BLANK))
-                                   (return total))
-                         ,n))
-                `(((3) ,(jnum 3))
-                  ((4) ,(jnum 6)))))
+         (map humanize
+              (run 1 (BLANK) (PBE-range-sum '(var (total 0)) '(var (i 0))
+                                            '(op < i n) '(:= i (op + i 1))
+                                            `(:= total . ,BLANK))))
          '(((op + i total))))
 
   (test= "Fibonacci recursive, second subtraction operation description (~10 seconds)"
          (map humanize
-              (run 1 (BLANK) (PBE (lambda (n)
-                                    `(call (function ()
-                                                     (var (fib (function (x)
-                                                                         (if (op < x 2)
-                                                                           (return x)
-                                                                           (return (op +
-                                                                                       (call fib (op - x 1))
-                                                                                       (call fib (op . ,BLANK))))))))
-                                                     (return (call fib ,n)))))
-                                  `(((2) ,(jnum 1))
-                                    ((5) ,(jnum 5))))))
+              (run 1 (BLANK) (PBE-fibonacci '(op < x 2) '(return x) '(- x 1) BLANK)))
          '((- x 2)))
 
   (test= "Modulo operator as generator (24 seconds)"
@@ -206,59 +165,25 @@
 
   (test= "Fibonacci recursive, condition (~32 seconds)"
          (map humanize
-              (run 1 (BLANK) (PBE (lambda (n)
-                                    `(call (function ()
-                                                     (var (fib (function (x)
-                                                                         (if ,BLANK
-                                                                           (return x)
-                                                                           (return (op +
-                                                                                       (call fib (op - x 1))
-                                                                                       (call fib (op - x 2))))))))
-                                                     (return (call fib ,n)))))
-                                  `(((2) ,(jnum 1))
-                                    ((5) ,(jnum 5))))))
+              (run 1 (BLANK) (PBE-fibonacci BLANK '(return x) '(- x 1) '(- x 2))))
          '((op < x 2)))
-
   (test= "Fibonacci recursive, first subtraction operation description (~68 seconds)"
          (map humanize
-              (run 1 (BLANK) (PBE (lambda (n)
-                                    `(call (function ()
-                                                     (var (fib (function (x)
-                                                                         (if (op < x 2)
-                                                                           (return x)
-                                                                           (return (op +
-                                                                                       (call fib (op . ,BLANK))
-                                                                                       (call fib (op - x 2))))))))
-                                                     (return (call fib ,n)))))
-                                  `(((2) ,(jnum 1))
-                                    ((5) ,(jnum 5))))))
+              (run 1 (BLANK) (PBE-fibonacci '(op < x 2) '(return x) BLANK '(- x 2))))
          '((- x 1)))
 
   (test= "Range sum, loop body (~5 minutes)"
-         (run 1 (BLANK)
-           (PBE (lambda (n)
-                  `(call (function (n)
-                                   (var (total 0))
-                                   (for ((var (i 0)) (op < i n) (:= i (op + i 1)))
-                                     ,BLANK)
-                                   (return total))
-                         ,n))
-                `(((3) ,(jnum 3))
-                  ((4) ,(jnum 6)))))
-         '(((:= total (op + i total)))))
-
-  ;   (test= "Range sum, increment (?)"
-  ;          (run 1 (BLANK)
-  ;            (PBE (lambda (n)
-  ;                   `(call (function (n)
-  ;                                    (var (total 0))
-  ;                                    (for ((var (i 0)) (op < i n) ,BLANK)
-  ;                                      (:= total (op + total i)))
-  ;                                    (return total))
-  ;                          ,n))
-  ;                 `(((3) ,(jnum 3))
-  ;                   ((4) ,(jnum 6)))))
-  ;          '((:= i (op + i 1))))
+         (map humanize
+              (run 1 (BLANK) (PBE-range-sum '(var (total 0)) '(var (i 0))
+                                            '(op < i n) '(:= i (op + i 1))
+                                            BLANK)))
+         '((var (total (op + total i)))))
+  ;(test= "Range sum, increment (?)"
+  ;       (map humanize
+  ;            (run 1 (BLANK) (PBE-range-sum '(var (total 0)) '(var (i 0))
+  ;                                          '(op < i n) BLANK
+  ;                                          '(:= total (op + total i)))))
+  ;       '((:= i (op + i 1))))
 
   (test= "Fibonacci recursive, condition, from LJS(?)"
          (humanize (run 1 (BLANK)
