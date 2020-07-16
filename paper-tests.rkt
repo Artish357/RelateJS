@@ -112,7 +112,7 @@
            ((5) ,(jnum 5)))))
 
   (test= "Fibonacci recursive (~125 milliseconds)"
-         (run 1 (_) (PBE-fibonacci '(op < x 2) '(return x) '(- x 1) '(- x 2)))
+         (run 1 (BLANK) (PBE-fibonacci '(op < x 2) '(return x) '(- x 1) '(- x 2)))
          '(_.0))
   (test= "Fibonacci recursive, base case (~270 milliseconds)"
          (run 1 (BLANK) (PBE-fibonacci '(op < x 2) BLANK '(- x 1) '(- x 2)))
@@ -144,9 +144,9 @@
 
   (test= "Range sum (~35 milliseconds)"
          (map humanize
-              (run 1 (_) (PBE-range-sum '(var (total 0)) '(var (i 0))
-                                        '(op < i n) '(:= i (op + i 1))
-                                        '(:= total (op + total i)))))
+              (run 1 (BLANK) (PBE-range-sum '(var (total 0)) '(var (i 0))
+                                            '(op < i n) '(:= i (op + i 1))
+                                            '(:= total (op + total i)))))
          '(_.0))
   (test= "Range sum, i declaration and initialization (~160 milliseconds)"
          (map humanize
