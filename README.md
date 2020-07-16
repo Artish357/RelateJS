@@ -1,5 +1,9 @@
 # RelateJS
-RelateJS is a relational interpreter JavaScript interpreter capable of synthesis powered by miniKanren.
+RelateJS is a proof-of-concept relational JavaScript interpreter capable of synthesis powered by miniKanren.
+Currently, only a subset of JavaScript is supported, and programs have to be expressed in s-expression form.
+
+## In short: what is relational programming? Why was it used?
+Relational programming is a paradigm where programs are expressed through relations between data. Relational programs do not have a fixed execution direction, and it allows for "running backwards": synthesizing input parameters that result in a certain output value. In the case of RelateJS, we can run the interpreter backwards to synthesize JavaScript source code that evaluates to a certain value, which can be very useful.
 
 # Paper abstract
 We introduce a miniKanren relational interpreter for a subset of JavaScript, capable of synthesizing imperative, s-expression JavaScript code to solve small problems that even human programmers might find tricky. Specifically, we write a relational parser that parses s-expression JavaScript to a intermediate language called LambdaJS, and a relational interpreter for that language.  We show that program synthesis is feasible through the composition of these two disjoint relations for parsing and evaluation.
