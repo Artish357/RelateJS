@@ -303,34 +303,34 @@
                                         '(- ((deref (var x)) 1))
                                         '(- ((deref (var x)) 2)))))
          '(_.0))
-  (test= "Fibonacci recursive, condition, with LJS (?)"
-         (humanize (run 1 (BLANK)
-                     (PBE-fibonacci/LJS BLANK
-                                        '(throw return (deref (var x)))
-                                        '(- ((deref (var x)) 1))
-                                        '(- ((deref (var x)) 2)))))
-         `((delta < ((deref (var x)) 2))))
-  (test= "Fibonacci recursive, base case, with LJS(?)"
-         (humanize (run 1 (BLANK)
-                     (PBE-fibonacci/LJS '(delta < ((deref (var x)) 2))
-                                        BLANK
-                                        '(- ((deref (var x)) 1))
-                                        '(- ((deref (var x)) 2)))))
-         `((throw return (deref (var x)))))
-  (test= "Fibonacci recursive, second subtraction operation description, with LJS (?)"
-         (humanize (run 1 (BLANK)
-                     (PBE-fibonacci/LJS '(delta < ((deref (var x)) 2))
-                                        '(throw return (deref (var x)))
-                                        '(- ((deref (var x)) 1))
-                                        BLANK)))
-         '((- ((deref (var x)) 2))))
-  (test= "Fibonacci recursive, first subtraction operation description, with LJS (?)"
-         (humanize (run 1 (BLANK)
-                     (PBE-fibonacci/LJS '(delta < ((deref (var x)) 2))
-                                        '(throw return (deref (var x)))
-                                        BLANK
-                                        '(- ((deref (var x)) 2)))))
-         '((- ((deref (var x)) 1))))
+  ;(test= "Fibonacci recursive, condition, with LJS (?)"
+  ;       (humanize (run 1 (BLANK)
+  ;                   (PBE-fibonacci/LJS BLANK
+  ;                                      '(throw return (deref (var x)))
+  ;                                      '(- ((deref (var x)) 1))
+  ;                                      '(- ((deref (var x)) 2)))))
+  ;       `((delta < ((deref (var x)) 2))))
+  ;(test= "Fibonacci recursive, base case, with LJS (?)"
+  ;       (humanize (run 1 (BLANK)
+  ;                   (PBE-fibonacci/LJS '(delta < ((deref (var x)) 2))
+  ;                                      BLANK
+  ;                                      '(- ((deref (var x)) 1))
+  ;                                      '(- ((deref (var x)) 2)))))
+  ;       `((throw return (deref (var x)))))
+  ;(test= "Fibonacci recursive, second subtraction operation description, with LJS (?)"
+  ;       (humanize (run 1 (BLANK)
+  ;                   (PBE-fibonacci/LJS '(delta < ((deref (var x)) 2))
+  ;                                      '(throw return (deref (var x)))
+  ;                                      '(- ((deref (var x)) 1))
+  ;                                      BLANK)))
+  ;       '((- ((deref (var x)) 2))))
+  ;(test= "Fibonacci recursive, first subtraction operation description, with LJS (?)"
+  ;       (humanize (run 1 (BLANK)
+  ;                   (PBE-fibonacci/LJS '(delta < ((deref (var x)) 2))
+  ;                                      '(throw return (deref (var x)))
+  ;                                      BLANK
+  ;                                      '(- ((deref (var x)) 2)))))
+  ;       '((- ((deref (var x)) 1))))
 
   (define (PBE-range-sum/LJS alloc-total var-total alloc-i var-i condition increment body)
     (PBE-evalo
@@ -378,7 +378,7 @@
       `(((3) ,(jnum 3))
         ((4) ,(jnum 6)))))
 
-  (test= "Range sum, with LJS (?)"
+  (test= "Range sum, with LJS (~25 milliseconds)"
          (humanize (run 1 (BLANK)
                      (PBE-range-sum/LJS '(allocate (undefined))
                                         '(assign (var total) 0)
@@ -390,7 +390,7 @@
                                            (var total)
                                            (delta + ((deref (var total)) (deref (var i))))))))
          '(_.0))
-  (test= "Range sum, i initialization, with LJS (133 milliseconds)"
+  (test= "Range sum, i initialization, with LJS (~150 milliseconds)"
          (humanize (run 1 (INIT)
                      (PBE-range-sum/LJS '(allocate (undefined))
                                         '(assign (var total) 0)
@@ -402,7 +402,7 @@
                                            (var total)
                                            (delta + ((deref (var total)) (deref (var i))))))))
          '((assign (var i) 0)))
-  (test= "Range sum, total initialization, with LJS (~ 5 seconds)"
+  (test= "Range sum, total initialization, with LJS (~5 seconds)"
          (humanize (run 1 (INIT)
                      (PBE-range-sum/LJS '(allocate (undefined))
                                         INIT
@@ -415,77 +415,77 @@
                                            (delta + ((deref (var total)) (deref (var i))))))))
          '((assign (var total) 0)))
 
-  (test= "Range sum, i allocation and initialization, with LJS (?)"
-         (humanize (run 1 (ALLOC INIT)
-                     (PBE-range-sum/LJS '(allocate (undefined))
-                                        '(assign (var total) 0)
-                                        ALLOC
-                                        INIT
-                                        '(delta < ((deref (var i)) (deref (var n))))
-                                        '(assign (var i) (delta + ((deref (var i)) 1)))
-                                        '(assign
-                                           (var total)
-                                           (delta + ((deref (var total)) (deref (var i))))))))
-         '((allocate (undefined)) (assign (var i) 0)))
-  (test= "Range sum, total allocation and initialization, with LJS (?)"
-         (humanize (run 1 (ALLOC INIT)
-                     (PBE-range-sum/LJS ALLOC
-                                        INIT
-                                        '(allocate (undefined))
-                                        '(assign (var i) 0)
-                                        '(delta < ((deref (var i)) (deref (var n))))
-                                        '(assign (var i) (delta + ((deref (var i)) 1)))
-                                        '(assign
-                                           (var total)
-                                           (delta + ((deref (var total)) (deref (var i))))))))
-         '((allocate (undefined)) (assign (var total) 0)))
+  ;(test= "Range sum, i allocation and initialization, with LJS (?)"
+  ;       (humanize (run 1 (ALLOC INIT)
+  ;                   (PBE-range-sum/LJS '(allocate (undefined))
+  ;                                      '(assign (var total) 0)
+  ;                                      ALLOC
+  ;                                      INIT
+  ;                                      '(delta < ((deref (var i)) (deref (var n))))
+  ;                                      '(assign (var i) (delta + ((deref (var i)) 1)))
+  ;                                      '(assign
+  ;                                         (var total)
+  ;                                         (delta + ((deref (var total)) (deref (var i))))))))
+  ;       '((allocate (undefined)) (assign (var i) 0)))
+  ;(test= "Range sum, total allocation and initialization, with LJS (?)"
+  ;       (humanize (run 1 (ALLOC INIT)
+  ;                   (PBE-range-sum/LJS ALLOC
+  ;                                      INIT
+  ;                                      '(allocate (undefined))
+  ;                                      '(assign (var i) 0)
+  ;                                      '(delta < ((deref (var i)) (deref (var n))))
+  ;                                      '(assign (var i) (delta + ((deref (var i)) 1)))
+  ;                                      '(assign
+  ;                                         (var total)
+  ;                                         (delta + ((deref (var total)) (deref (var i))))))))
+  ;       '((allocate (undefined)) (assign (var total) 0)))
 
-  (test= "Range sum, end condition, with LJS (?)"
-         (humanize (run 1 (BLANK)
-                     (PBE-range-sum/LJS '(allocate (undefined))
-                                        '(assign (var total) 0)
-                                        '(allocate (undefined))
-                                        '(assign (var i) 0)
-                                        BLANK
-                                        '(assign (var i) (delta + ((deref (var i)) 1)))
-                                        '(assign
-                                           (var total)
-                                           (delta + ((deref (var total)) (deref (var i))))))))
-         '((delta < ((deref (var i)) (deref (var n))))))
-  (test= "Range sum, assignment right-hand-side, with LJS (?)"
-         (humanize (run 1 (BLANK)
-                     (PBE-range-sum/LJS '(allocate (undefined))
-                                        '(assign (var total) 0)
-                                        '(allocate (undefined))
-                                        '(assign (var i) 0)
-                                        '(delta < ((deref (var i)) (deref (var n))))
-                                        '(assign (var i) (delta + ((deref (var i)) 1)))
-                                        '(assign
-                                           (var total)
-                                           ,BLANK))))
-         '((delta + ((deref (var total)) (deref (var i))))))
-  (test= "Range sum, loop body, with LJS (?)"
-         (humanize (run 1 (BLANK)
-                     (PBE-range-sum/LJS '(allocate (undefined))
-                                        '(assign (var total) 0)
-                                        '(allocate (undefined))
-                                        '(assign (var i) 0)
-                                        '(delta < ((deref (var i)) (deref (var n))))
-                                        '(assign (var i) (delta + ((deref (var i)) 1)))
-                                        BLANK)))
-         '((assign
-             (var total)
-             (delta + ((deref (var total)) (deref (var i)))))))
-  (test= "Range sum, increment, with LJS (?)"
-         (humanize (run 1 (BLANK)
-                     (PBE-range-sum/LJS '(allocate (undefined))
-                                        '(assign (var total) 0)
-                                        '(allocate (undefined))
-                                        '(assign (var i) 0)
-                                        '(delta < ((deref (var i)) (deref (var n))))
-                                        BLANK
-                                        '(assign
-                                           (var total)
-                                           (delta + ((deref (var total)) (deref (var i))))))))
-         '((assign (var i) (delta + ((deref (var i)) 1)))))
+  ;(test= "Range sum, end condition, with LJS (?)"
+  ;       (humanize (run 1 (BLANK)
+  ;                   (PBE-range-sum/LJS '(allocate (undefined))
+  ;                                      '(assign (var total) 0)
+  ;                                      '(allocate (undefined))
+  ;                                      '(assign (var i) 0)
+  ;                                      BLANK
+  ;                                      '(assign (var i) (delta + ((deref (var i)) 1)))
+  ;                                      '(assign
+  ;                                         (var total)
+  ;                                         (delta + ((deref (var total)) (deref (var i))))))))
+  ;       '((delta < ((deref (var i)) (deref (var n))))))
+  ;(test= "Range sum, assignment right-hand-side, with LJS (?)"
+  ;       (humanize (run 1 (BLANK)
+  ;                   (PBE-range-sum/LJS '(allocate (undefined))
+  ;                                      '(assign (var total) 0)
+  ;                                      '(allocate (undefined))
+  ;                                      '(assign (var i) 0)
+  ;                                      '(delta < ((deref (var i)) (deref (var n))))
+  ;                                      '(assign (var i) (delta + ((deref (var i)) 1)))
+  ;                                      `(assign
+  ;                                         (var total)
+  ;                                         ,BLANK))))
+  ;       '((delta + ((deref (var total)) (deref (var i))))))
+  ;(test= "Range sum, loop body, with LJS (?)"
+  ;       (humanize (run 1 (BLANK)
+  ;                   (PBE-range-sum/LJS '(allocate (undefined))
+  ;                                      '(assign (var total) 0)
+  ;                                      '(allocate (undefined))
+  ;                                      '(assign (var i) 0)
+  ;                                      '(delta < ((deref (var i)) (deref (var n))))
+  ;                                      '(assign (var i) (delta + ((deref (var i)) 1)))
+  ;                                      BLANK)))
+  ;       '((assign
+  ;           (var total)
+  ;           (delta + ((deref (var total)) (deref (var i)))))))
+  ;(test= "Range sum, increment, with LJS (?)"
+  ;       (humanize (run 1 (BLANK)
+  ;                   (PBE-range-sum/LJS '(allocate (undefined))
+  ;                                      '(assign (var total) 0)
+  ;                                      '(allocate (undefined))
+  ;                                      '(assign (var i) 0)
+  ;                                      '(delta < ((deref (var i)) (deref (var n))))
+  ;                                      BLANK
+  ;                                      '(assign
+  ;                                         (var total)
+  ;                                         (delta + ((deref (var total)) (deref (var i))))))))
+  ;       '((assign (var i) (delta + ((deref (var i)) 1)))))
   )
