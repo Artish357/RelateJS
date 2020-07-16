@@ -11,6 +11,15 @@
                   (evalo code expected-result store)))
          (== #t #t) examples))
 
+(define (PBE-parseo make-js examples)
+  (foldl (lambda (example prev-goal)
+           (define args          (car  example))
+           (define expected-code (cadr example))
+           (fresh ()
+             prev-goal
+             (parseo/readable (apply make-js args) expected-code)))
+         (== #t #t) examples))
+
 (define (PBE-evalo make-js examples)
   (foldl (lambda (example prev-goal)
            (define args            (car  example))
@@ -74,6 +83,21 @@
            (var x)
            (var (x (op _.0)))))
 
+  ;(test= "Parse Fibonacci"
+  ;       (map humanize
+  ;            (run 1 (code)
+  ;              (PBE-parseo (lambda (n)
+  ;                            `(call (function ()
+  ;                                             (var (fib (function (x)
+  ;                                                                 (if (op < x 2)
+  ;                                                                   (return x)
+  ;                                                                   (return (op +
+  ;                                                                               (call fib (op - x 1))
+  ;                                                                               (call fib (op - x 2))))))))
+  ;                                             (return (call fib ,n)))))
+  ;                          `(((123) ,code)))))
+  ;       'fail)
+
   (define (PBE-fibonacci condition base-case recursive-1 recursive-2)
     (PBE (lambda (n)
            `(call (function ()
@@ -93,6 +117,19 @@
   (test= "Fibonacci recursive, base case (~270 milliseconds)"
          (run 1 (BLANK) (PBE-fibonacci '(op < x 2) BLANK '(- x 1) '(- x 2)))
          '((return x)))
+
+  ;(test= "Parse range sum"
+  ;       (map humanize
+  ;            (run 1 (code)
+  ;              (PBE-parseo (lambda (n)
+  ;                            `(call (function (n)
+  ;                                             (var (total 0))
+  ;                                             (for ((var (i 0)) (op < i n) (:= i (op + i 1)))
+  ;                                               (:= total (op + total i)))
+  ;                                             (return total))
+  ;                                   ,n))
+  ;                          `(((123) ,code)))))
+  ;       'fail)
 
   (define (PBE-range-sum var-total var-i condition increment body)
     (PBE (lambda (n)
@@ -184,6 +221,79 @@
   ;                                          '(op < i n) BLANK
   ;                                          '(:= total (op + total i)))))
   ;       '((:= i (op + i 1))))
+
+  (define (PBE-fibonacci/LJS condition base-case recursive-1 recursive-2)
+    (PBE-evalo
+      (lambda (n)
+        `(app
+           (get
+             (get
+               (deref
+                 (allocate
+                   (set
+                     (object (("public" object ())))
+                     "private"
+                     (set
+                       (object ())
+                       "call"
+                       (fun
+                         ()
+                         (catch
+                           return
+                           (begin
+                             (let fib (allocate (undefined))
+                               (begin
+                                 (begin
+                                   (assign
+                                     (var fib)
+                                     (allocate
+                                       (set
+                                         (object (("public" object ())))
+                                         "private"
+                                         (set
+                                           (object ())
+                                           "call"
+                                           (fun
+                                             (x)
+                                             (catch
+                                               return
+                                               (begin
+                                                 (let x (allocate (var x))
+                                                   (begin
+                                                     (if ,condition
+                                                       ,base-case
+                                                       (throw
+                                                         return
+                                                         (delta
+                                                           +
+                                                           ((app
+                                                              (get
+                                                                (get (deref (deref (var fib))) "private")
+                                                                "call")
+                                                              ((delta . ,recursive-1)))
+                                                            (app
+                                                              (get
+                                                                (get (deref (deref (var fib))) "private")
+                                                                "call")
+                                                              ((delta . ,recursive-2)))))))
+                                                     (undefined)))
+                                                 (undefined))
+                                               result
+                                               (var result)))))))
+                                   (undefined))
+                                 (throw
+                                   return
+                                   (app
+                                     (get (get (deref (deref (var fib))) "private") "call")
+                                     (,n)))))
+                             (undefined))
+                           result
+                           (var result)))))))
+               "private")
+             "call")
+           ()))
+      `(((2) ,(jnum 1))
+        ((5) ,(jnum 5)))))
 
   (test= "Fibonacci recursive, condition, from LJS(?)"
          (humanize (run 1 (BLANK)
