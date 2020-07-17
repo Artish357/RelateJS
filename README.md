@@ -1,5 +1,6 @@
 # RelateJS
-RelateJS is a proof-of-concept relational JavaScript interpreter capable of synthesis powered by miniKanren.
+RelateJS is a proof-of-concept relational JavaScript interpreter capable of code synthesis. Powered by Racket and miniKanren.
+
 Currently, only a subset of JavaScript is supported, and programs have to be expressed in s-expression form.
 
 ## In short: what is relational programming? Why was it used?
