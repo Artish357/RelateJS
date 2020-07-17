@@ -25,7 +25,7 @@ Created for miniKanren 2020 workshop
 * [Racket interpreter](https://racket-lang.org/) (Was tested on racket 7.4)
 
 ## Setup
-To set up the repo and run tests, type the following lines into terminal:
+To set up the repo and run examples from the "JavaScript Synthesis Experiments" section of the paper, type the following lines into terminal:
 ```bash
 git clone https://github.com/Artish357/RelateJS
 cd RelateJS
