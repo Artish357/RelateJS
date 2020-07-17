@@ -1,7 +1,7 @@
 # RelateJS
 RelateJS is a proof-of-concept relational JavaScript interpreter capable of code synthesis. Powered by Racket and miniKanren.
 
-Currently, only a subset of JavaScript is supported, and programs have to be expressed in s-expression form.
+Currently, only a subset of JavaScript is supported, and programs have to be expressed in the S-expression form.
 
 ## In short: what is relational programming? Why was it used?
 Relational programming is a paradigm where programs are expressed through relations between data. Relational programs do not differentiate between input and output data, simply trying to fill "holes" within their relations. In the case of RelateJS, we can either run the interpreter forward to execute JavaScript code or backwards to synthesize JavaScript source code that evaluates to a certain value.
